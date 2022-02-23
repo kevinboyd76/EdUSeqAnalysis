@@ -1,0 +1,2 @@
+sample,fastq1,fastq2
+testSample,resources/test_S7_R1_001_sub.fastq.gz,resources/test_S7_R2_001_sub.fastq.gz

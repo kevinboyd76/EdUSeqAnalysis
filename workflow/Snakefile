@@ -1,0 +1,94 @@
+configfile: "config/config.yml"
+
+##################################################################
+##                    Define input functions                    ##
+##################################################################
+
+# this was created after reading 
+#  https://eriqande.github.io/eca-bioinf-handbook/managing-workflows-with-snakemake.html
+
+# this imports the pandas package functionality in an object named pd
+import pandas as pd
+
+# this reads the CSV file and sets an index using the values in the "sample" column.
+samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
+
+# input function definition set to Python dictionary
+def fq_dict_from_sample(wildcards):
+  return {
+    "fq1": samples_table.loc[wildcards.sample, "fastq1"],
+    "fq2": samples_table.loc[wildcards.sample, "fastq2"]
+  }
+
+##################################################################
+##                           rules                              ##
+##################################################################
+
+# to run snakemake without explicitly requesting any output files on the command line, we must request output files in the first rule. Therefore we include this otherwise useless rule here  
+rule all:
+    input:
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
+        expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
+        expand("results/aligned/{sample}.bam", sample = samples_table.index)
+
+
+# run fastqc on fastq.gz files before trimming
+rule fastqc_reads:
+    input:
+        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+    output:
+        html1="results/qc/fastqc/{sample}_R1_fastqc.html",
+        zip1="results/qc/fastqc/{sample}_R1_fastqc.zip",
+        html2="results/qc/fastqc/{sample}_R2_fastqc.html",
+        zip2="results/qc/fastqc/{sample}_R2_fastqc.zip"
+    log: "results/logs/snakelogs/fastqc_reads.{sample}.log"
+    shell:
+        """
+        ml fastqc
+        module whatis fastqc >> {log}
+        fastqc {input.fq1}
+        fastqc {input.fq2}
+        dir=$(dirname {input.fq1})
+        bsename=$(basename {input.fq1} .fastq.gz)
+        mv ${{dir}}/${{bsename}}_fastqc.html {output.html1}
+        mv ${{dir}}/${{bsename}}_fastqc.zip {output.zip1}
+        bsename=$(basename {input.fq2} .fastq.gz)
+        mv ${{dir}}/${{bsename}}_fastqc.html {output.html2}
+        mv ${{dir}}/${{bsename}}_fastqc.zip {output.zip2}
+        """
+
+# trim reads
+rule trim_reads_with_fastp:
+    input:
+        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+    output:
+        trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
+        trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",
+        fastp_report="results/qc/fastp_reports/{sample}.html",
+        fastp_json="results/qc/fastp_reports/{sample}.json"
+    log: "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
+    shell:
+        """
+        ml fastp
+        module whatis fastp >> {log}
+        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
+        """
+
+# align reads to genome
+rule align_reads_with_bwamem:
+    input:
+        R1=expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),  # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+        R2=expand("results/trimmed/{sample}_trimmed_R2.fastq.gz", sample = samples_table.index)  # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+    params:
+        genome=config["genome"]
+    output:
+        bam="results/aligned/{sample}.bam",
+        bai="results/aligned/{sample}.bam.bai"
+    log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
+    shell:
+        """
+        ml bwa samtools
+        module whatis bwa samtools >> {log}
+        bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
+        samtools index -@ 12 {output.bam} > {output.bai}
+        """

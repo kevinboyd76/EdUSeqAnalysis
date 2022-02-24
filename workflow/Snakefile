@@ -40,7 +40,8 @@ rule all:
     input:
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
         expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
-        expand("results/aligned/{sample}.bam", sample = samples_table.index)
+        expand("results/aligned/{sample}.bam", sample = samples_table.index),
+        expand("{sample}-W200-G600-FDR0.01-island.bed", sample = samples_table2.index)
 
 
 # run fastqc on fastq.gz files before trimming

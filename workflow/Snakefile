@@ -28,7 +28,7 @@ samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
 def sample_type_dict_from_sample(wildcards):
   return {
     "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
-    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sampleType"] + '.bam'
+    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.bam'
   }
 
 ##################################################################

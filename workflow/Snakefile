@@ -89,7 +89,7 @@ rule trim_reads_with_fastp:
 # align reads to genome
 rule align_reads_with_bwamem:
     input:
-        R1="results/trimmed/{sample}_trimmed_R1.fastq.gz"
+        R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
         #R1=expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),  # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
         #R2=expand("results/trimmed/{sample}_trimmed_R2.fastq.gz", sample = samples_table.index)  # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs

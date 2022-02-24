@@ -120,5 +120,5 @@ rule call_peaks_with_sicer:
     shell:
         """
         ml sicer2
-        sicer  -t {input.TREATED} -c {params.CONTROL} -s hg19 -w 200 -f 150 -fdr 0.01 -o results/sicer/ -g 600 -cpu 12
+        sicer -t {input.TREATED} -c {params.CONTROL} -s hg19 -w 200 -f 150 -fdr 0.01 -o results/sicer/ -g 600 -cpu 12
         """

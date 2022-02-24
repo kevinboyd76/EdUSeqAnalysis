@@ -6,6 +6,7 @@ configfile: "config/config.yml"
 
 # this was created after reading 
 #  https://eriqande.github.io/eca-bioinf-handbook/managing-workflows-with-snakemake.html
+#  https://www.biostars.org/p/335903/
 
 # this imports the pandas package functionality in an object named pd
 import pandas as pd

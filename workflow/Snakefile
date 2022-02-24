@@ -44,8 +44,8 @@ rule fastqc_reads:
     log: "results/logs/snakelogs/fastqc_reads.{sample}.log"
     shell:
         """
-        ml fastqc
-        module whatis fastqc >> {log}
+        #ml fastqc
+        #module whatis fastqc >> {log}
         fastqc {input.fq1}
         fastqc {input.fq2}
         dir=$(dirname {input.fq1})
@@ -69,8 +69,8 @@ rule trim_reads_with_fastp:
     log: "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
     shell:
         """
-        ml fastp
-        module whatis fastp >> {log}
+        #ml fastp
+        #module whatis fastp >> {log}
         fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
         """
 
@@ -87,8 +87,8 @@ rule align_reads_with_bwamem:
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        ml bwa samtools
-        module whatis bwa samtools >> {log}
+        #ml bwa samtools
+        #module whatis bwa samtools >> {log}
         bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
         samtools index -@ 12 {output.bam} > {output.bai}
         """

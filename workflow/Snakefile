@@ -109,11 +109,6 @@ rule align_reads_with_bwamem:
 rule call_peaks_with_sicer:
     input:
         TREATED=expand("results/aligned/{sample}.bam", sample = samples_table2.index)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
-    output:
-        html1="results/qc/fastqc/{sample}_R1_fastqc.html",
-        zip1="results/qc/fastqc/{sample}_R1_fastqc.zip",
-        html2="results/qc/fastqc/{sample}_R2_fastqc.html",
-        zip2="results/qc/fastqc/{sample}_R2_fastqc.zip"
     params:
         CONTROL=expand("results/aligned/{control}.bam", control = samples_table2.Control)
     output:

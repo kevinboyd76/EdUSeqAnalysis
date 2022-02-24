@@ -27,8 +27,8 @@ samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
 # sample_type input function definition set to Python dictionary
 def sample_type_dict_from_sample(wildcards):
   return {
-    "treatment": {samples_table2.loc[wildcards.sample, wildcards.sample]}.bam,
-    "control": {samples_table2.loc[wildcards.sample, "sampleType"]}.bam
+    "treatment": samples_table2.loc[wildcards.sample, wildcards.sample],
+    "control": samples_table2.loc[wildcards.sample, "sampleType"]
   }
 
 ##################################################################
@@ -120,5 +120,5 @@ rule call_peaks_with_sicer:
     shell:
         """
         ml sicer2
-        sicer -t {input.treatment} -c {input.control} -s hg19 -w 200 -f 150 -fdr 0.01 -o results/sicer/ -g 600 -cpu 12
+        sicer -t {input.treatment}.bam -c {input.control}.bam -s hg19 -w 200 -f 150 -fdr 0.01 -o results/sicer/ -g 600 -cpu 12
         """

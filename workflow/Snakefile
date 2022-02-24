@@ -116,7 +116,7 @@ rule call_peaks_with_sicer:
         "{sample}-W200-G600-FDR0.01-island.bed"
     conda:
         "envs/qc_trim_align.yml"
-    log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
+    log: "results/logs/snakelogs/call_peaks_with_sicer.{sample}.log"
     shell:
         """
         ml sicer2

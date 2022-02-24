@@ -27,8 +27,8 @@ samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
 # sample_type input function definition set to Python dictionary
 def sample_type_dict_from_sample(wildcards):
   return {
-    "treatment": samples_table2.loc[wildcards.sample, "sample"],
-    "control": samples_table2.loc[wildcards.sample, "sampleType"]
+    "treatment": f"{samples_table2.loc[wildcards.sample, "sample"]}.bam",
+    "control": f"{samples_table2.loc[wildcards.sample, "sampleType"]}.bam"
   }
 
 ##################################################################

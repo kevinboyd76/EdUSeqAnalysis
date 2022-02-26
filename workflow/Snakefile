@@ -41,7 +41,7 @@ rule all:
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
         expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
-        expand("{sample}-W200-G600-FDR0.01-island.bed", sample = samples_table2.index)
+        expand("{sample}-W{params.sicer_windowSize}-G{params.sicer_gapSize}-FDR{params.sicer_fdr}-island.bed", sample = samples_table2.index)
 
 
 # run fastqc on fastq.gz files before trimming
@@ -91,8 +91,6 @@ rule align_reads_with_bwamem:
     input:
         R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
-        #R1=expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),  # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
-        #R2=expand("results/trimmed/{sample}_trimmed_R2.fastq.gz", sample = samples_table.index)  # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
     params:
         genome=config["genome"]
     output:
@@ -103,7 +101,7 @@ rule align_reads_with_bwamem:
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
+        bwa mem -M -t 12 {params.bwa_genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
         samtools index -@ 12 {output.bam} > {output.bai}
         """
 
@@ -113,12 +111,12 @@ rule call_peaks_with_sicer:
     input:
         unpack(sample_type_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
     output:
-        "{sample}-W200-G600-FDR0.01-island.bed"
+        "{sample}-W{params.sicer_windowSize}-G{params.sicer_gapSize}-FDR{params.sicer_fdr}-island.bed"
     conda:
         "envs/qc_trim_align.yml"
     log: "results/logs/snakelogs/call_peaks_with_sicer.{sample}.log"
     shell:
         """
         ml sicer2
-        sicer -t {input.treatment} -c {input.control} -s hg19 -w 200 -f 150 -fdr 0.01 -o results/sicer/ -g 600 -cpu 12
+        sicer -t {input.treatment} -c {input.control} -s {params.sicer_genome} -w {params.sicer_windowSize} -f {params.sicer_fragmentSize} -fdr {params.sicer_fdr} -o results/sicer/ -g {params.sicer_gapSize} -cpu 12
         """

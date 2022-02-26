@@ -41,7 +41,7 @@ rule all:
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
         expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
-        expand("{sample}-W{params.sicer_windowSize}-G{params.sicer_gapSize}-FDR{params.sicer_fdr}-island.bed", sample = samples_table2.index)
+        expand("{sample}-W{{params.sicer_windowSize}}-G{{params.sicer_gapSize}}-FDR{{params.sicer_fdr}}-island.bed", sample = samples_table2.index)
 
 
 # run fastqc on fastq.gz files before trimming
@@ -92,7 +92,7 @@ rule align_reads_with_bwamem:
         R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
     params:
-        genome=config["genome"]
+        genome=config["bwa_genome"]
     output:
         bam="results/aligned/{sample}.bam",
         bai="results/aligned/{sample}.bam.bai"
@@ -101,7 +101,7 @@ rule align_reads_with_bwamem:
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa mem -M -t 12 {params.bwa_genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
+        bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
         samtools index -@ 12 {output.bam} > {output.bai}
         """
 
@@ -112,6 +112,12 @@ rule call_peaks_with_sicer:
         unpack(sample_type_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
     output:
         "{sample}-W{params.sicer_windowSize}-G{params.sicer_gapSize}-FDR{params.sicer_fdr}-island.bed"
+    params:
+        sicer_genome=config["sicer_genome"],
+        sicer_windowSize=config["sicer_windowSize"],
+        sicer_fragmentSize=config["sicer_fragmentSize"],
+        sicer_fdr=config["sicer_fdr"],
+        sicer_gapSize=config["sicer_gapSize"]
     conda:
         "envs/qc_trim_align.yml"
     log: "results/logs/snakelogs/call_peaks_with_sicer.{sample}.log"

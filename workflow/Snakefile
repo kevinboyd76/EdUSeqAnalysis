@@ -123,6 +123,5 @@ rule call_peaks_with_sicer:
     log: "results/logs/snakelogs/call_peaks_with_sicer.{sample}.log"
     shell:
         """
-        ml sicer2
         sicer -t {input.treatment} -c {input.control} -s {params.sicer_genome} -w {params.sicer_windowSize} -f {params.sicer_fragmentSize} -fdr {params.sicer_fdr} -o results/sicer/ -g {params.sicer_gapSize} -cpu 12
         """

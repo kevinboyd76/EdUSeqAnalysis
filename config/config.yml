@@ -1,4 +1,4 @@
-bwa_genome: "/Volumes/hts_core/Shared/hg19/bwa_7_6_indexed/hg19.fasta"
+bwa_genome: "/Volumes/shared-refs/hg19/bwa_7_6_indexed/hg19.fasta"
 sicer_genome: "hg19"
 sicer_windowSize: 200
 sicer_fragmentSize: 150

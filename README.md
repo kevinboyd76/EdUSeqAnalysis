@@ -7,7 +7,7 @@ git clone https://github.com/SansamLab/EdUSeqAnalysis.git
 ## 2. Load modules
 ```
 module purge
-module load slurm python/3.10 pandas/1.0.3 numpy/1.18.2
+module load slurm python/3.7.0  pandas/1.0.3  numpy/1.18.2
 ```
 ## 3. Modify Samples file
 ```

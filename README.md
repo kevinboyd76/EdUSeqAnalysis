@@ -7,7 +7,7 @@ git clone https://github.com/SansamLab/EdUSeqAnalysis.git
 ## 2. Load modules
 ```
 module purge
-module load slurm bwa/0.7.17 fastqc/0.12.1 fastp/0.23.2 samtools/1.18 deeptools macs2 python/3.10 pandas/1.0.3 numpy/1.18.2
+module load slurm python/3.10 pandas/1.0.3 numpy/1.18.2
 ```
 ## 3. Modify Samples file
 ```

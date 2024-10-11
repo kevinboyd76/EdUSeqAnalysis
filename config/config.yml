@@ -1,6 +1,12 @@
+# aligner step
 bwa_genome: "/Volumes/shared-refs/hg19/bwa_7_6_indexed/hg19.fasta"
-sicer_genome: "hg19"
-sicer_windowSize: 200
-sicer_fragmentSize: 150
-sicer_fdr: 0.01
-sicer_gapSize: 600
+
+# macs2 params
+effective_genome_size: 2913022398
+macs2_minimum_fdr: 0.05
+
+# bamCoverage params
+bin_size: 10000
+min_mapping_quality: 30
+effective_genome_size: 2913022398
+blacklistFile: "/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/resources/ENCFF356LFX.bed"

@@ -105,7 +105,7 @@ rule align_reads_with_bwamem:
     conda:
         "envs/qc_trim_align.yml"
     envmodules:
-        config["bwamem"]
+        config["bwa"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """

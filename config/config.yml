@@ -1,4 +1,4 @@
-# aligner step
+# aligner params
 bwa_genome: "/Volumes/shared-refs/hg19/bwa_7_6_indexed/hg19.fasta"
 # macs2 params
 effective_genome_size: 2913022398
@@ -9,12 +9,10 @@ min_mapping_quality: 30
 effective_genome_size: 2913022398
 blacklistFile: "/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/resources/ENCFF356LFX.bed"
 # Modules
-trimmomatic: "trimmomatic/0.35"
-cutadapt: "cutadapt/3.7"
-bowtie2: "bowtie2/2.3.1"
-samtools: "samtools/1.14"
-sicer2: "sicer2/1.0.2"
+bwa: "bwa/0.7.17"
+fastqc: "fastqc/0.12.1"
+fastp: "fastp/0.23.2"
+samtools: "samtools/1.18"
 macs2: "macs2/2.2.7.1"
 deeptools: "deeptools/3.4.3"
-R: "R/4.1.2-mkl"
 Bioconductor: "bioconductor/3.14"

@@ -23,16 +23,21 @@ def sample_type_dict_from_sample(wildcards):
   }
 
 ##################################################################
-##                           rules                              ##
+##                           Rule All                           ##
 ##################################################################
 
 rule all:
     input:
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
-        expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
-        expand("results/aligned/{sample}.bam", sample = samples_table.index),
-        expand("results/macs2_broadPeaks/{sample}_peaks.broadPeak", sample = samples_table2.index),
-        expand("results/bigwigs/{sample}.bw", sample = samples_table.index)
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=samples_table.index),
+        expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample=samples_table.index),
+        expand("results/aligned/{sample}.bam", sample=samples_table.index),
+        expand("results/sam_files/{sample}.sam", sample=samples_table.index),
+        expand("results/macs2_broadPeaks/{sample}_peaks.broadPeak", sample=samples_table2.index),
+        expand("results/bigwigs/{sample}.bw", sample=samples_table.index)
+
+##################################################################
+##                         fastqc_reads                         ##
+##################################################################
 
 rule fastqc_reads:
     input:
@@ -60,6 +65,10 @@ rule fastqc_reads:
         mv ${{dir}}/${{bsename}}_fastqc.zip {output.zip2}
         """
 
+##################################################################
+##                    trim_reads_with_fastp                     ##
+##################################################################
+
 rule trim_reads_with_fastp:
     input:
         unpack(fq_dict_from_sample)
@@ -75,6 +84,10 @@ rule trim_reads_with_fastp:
         """
         fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
         """
+
+##################################################################
+##                   align_reads_with_bwamem                    ##
+##################################################################
 
 rule align_reads_with_bwamem:
     input:
@@ -92,6 +105,23 @@ rule align_reads_with_bwamem:
         """
         bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
         samtools index -@ 12 {output.bam} > {output.bai}
+        """
+
+##################################################################
+##                           Bam to Sam                         ##
+##################################################################
+
+rule bam_to_sam:
+    input:
+        bam="results/aligned/{sample}.bam"
+    output:
+        sam="results/aligned/{sample}.sam"
+    conda:
+        "envs/qc_trim_align.yml"
+    log: "results/logs/snakelogs/bam_to_sam.{sample}.log"
+    shell:
+        """
+        samtools view -h -o {output.sam} {input.bam}
         """
 
 ##################################################################

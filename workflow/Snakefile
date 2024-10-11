@@ -4,18 +4,27 @@ configfile: "config/config.yml"
 ##                    Define input functions                    ##
 ##################################################################
 
+# Author: Kevin Boyd
+# Date: Oct 11, 2024
+# Acknowledments: This was created after reading and modifying initial snakefile from Chris Sansam
+
+
 import pandas as pd
 
+# read the CSV file and set an index using the values in the "sample" column.
 samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
 
+# fastq filename input function definition set to Python dictionary
 def fq_dict_from_sample(wildcards):
   return {
     "fq1": samples_table.loc[wildcards.sample, "fastq1"],
     "fq2": samples_table.loc[wildcards.sample, "fastq2"]
   }
 
+# make a new sample table with only the 'treatment' sample rows
 samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
 
+# sample_type input function definition set to Python dictionary
 def sample_type_dict_from_sample(wildcards):
   return {
     "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
@@ -23,32 +32,32 @@ def sample_type_dict_from_sample(wildcards):
   }
 
 ##################################################################
-##                           Rule All                           ##
+##                          Rule All                            ##
 ##################################################################
 
 rule all:
     input:
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=samples_table.index),
-        expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample=samples_table.index),
-        expand("results/aligned/{sample}.bam", sample=samples_table.index),
-        expand("results/sam_files/{sample}.sam", sample=samples_table.index),
-        expand("results/macs2_broadPeaks/{sample}_peaks.broadPeak", sample=samples_table2.index),
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
+        expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
+        expand("results/aligned/{sample}.bam", sample = samples_table.index),
+        expand("results/aligned/{sample}.sam", sample = samples_table.index),
+        expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index)
 
 ##################################################################
 ##                         fastqc_reads                         ##
 ##################################################################
 
+# run fastqc on fastq.gz files before trimming
+
 rule fastqc_reads:
     input:
-        unpack(fq_dict_from_sample)
+        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
     output:
         html1="results/qc/fastqc/{sample}_R1_fastqc.html",
         zip1="results/qc/fastqc/{sample}_R1_fastqc.zip",
         html2="results/qc/fastqc/{sample}_R2_fastqc.html",
         zip2="results/qc/fastqc/{sample}_R2_fastqc.zip"
-    conda:
-        "envs/qc_trim_align.yml"
     envmodules:
         config["fastqc"]
     log: "results/logs/snakelogs/fastqc_reads.{sample}.log"
@@ -73,14 +82,12 @@ rule fastqc_reads:
 
 rule trim_reads_with_fastp:
     input:
-        unpack(fq_dict_from_sample)
+        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
     output:
         trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",
         fastp_report="results/qc/fastp_reports/{sample}.html",
         fastp_json="results/qc/fastp_reports/{sample}.json"
-    conda:
-        "envs/qc_trim_align.yml"
     envmodules:
         config["fastp"]
     log: "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
@@ -104,8 +111,6 @@ rule align_reads_with_bwamem:
         bai="results/aligned/{sample}.bam.bai"
     conda:
         "envs/qc_trim_align.yml"
-    envmodules:
-        config["bwa"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
@@ -122,8 +127,6 @@ rule bam_to_sam:
         bam="results/aligned/{sample}.bam"
     output:
         sam="results/aligned/{sample}.sam"
-    conda:
-        "envs/qc_trim_align.yml"
     envmodules:
         config["samtools"]
     log: "results/logs/snakelogs/bam_to_sam.{sample}.log"
@@ -140,7 +143,7 @@ rule call_peaks_with_macs2:
     input:
         unpack(sample_type_dict_from_sample)
     output:
-        "results/macs2_broadPeaks/{sample}_peaks.broadPeak"
+        "results/macs2/{sample}.macs2Peaks"
     params:
         effective_genome_size=config["effective_genome_size"],
         sample_name="{sample}",
@@ -152,7 +155,7 @@ rule call_peaks_with_macs2:
     log: "results/logs/snakelogs/call_peaks_with_macs2.{sample}.log"
     shell:
         """
-        macs2 callpeak -t {input.treatment} -c {input.control} -f BAMPE -g {params.effective_genome_size} -n {params.sample_name}_{params.minimum_FDR_cutoff} -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2_broadPeaks/
+        macs2 callpeak -t {input.treatment} -c {input.control} -f BAMPE -g {params.effective_genome_size} -n {params.sample_name}_{params.minimum_FDR_cutoff} -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2/
         """
 
 ##################################################################
@@ -165,9 +168,9 @@ rule make_bigwig:
     output:
         bigwig="results/bigwigs/{sample}.bw"
     params:
-        bin_size=config["bin_size"]
-        min_mapping_quality=config["min_mapping_quality"]
-        genome_size=config["effective_genome_size"]
+        bin_size=config["bin_size"],
+        min_mapping_quality=config["min_mapping_quality"],
+        genome_size=config["effective_genome_size"],
         blacklistFile=config["blacklistFile"]
     conda:
         "envs/qc_trim_align.yml"
@@ -178,3 +181,4 @@ rule make_bigwig:
         """
         bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.min_mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
         """
+

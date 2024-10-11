@@ -1,0 +1,138 @@
+configfile: "config/config.yml"
+
+##################################################################
+##                    Define input functions                    ##
+##################################################################
+
+import pandas as pd
+
+samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
+
+def fq_dict_from_sample(wildcards):
+  return {
+    "fq1": samples_table.loc[wildcards.sample, "fastq1"],
+    "fq2": samples_table.loc[wildcards.sample, "fastq2"]
+  }
+
+samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
+
+def sample_type_dict_from_sample(wildcards):
+  return {
+    "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
+    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.bam'
+  }
+
+##################################################################
+##                           rules                              ##
+##################################################################
+
+rule all:
+    input:
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
+        expand("results/qc/fastqc/{sample}_R1_fastqc.html", sample = samples_table.index),
+        expand("results/aligned/{sample}.bam", sample = samples_table.index),
+        expand("results/macs2_broadPeaks/{sample}_peaks.broadPeak", sample = samples_table2.index),
+        expand("results/bigwigs/{sample}.bw", sample = samples_table.index)
+
+rule fastqc_reads:
+    input:
+        unpack(fq_dict_from_sample)
+    output:
+        html1="results/qc/fastqc/{sample}_R1_fastqc.html",
+        zip1="results/qc/fastqc/{sample}_R1_fastqc.zip",
+        html2="results/qc/fastqc/{sample}_R2_fastqc.html",
+        zip2="results/qc/fastqc/{sample}_R2_fastqc.zip"
+    conda:
+        "envs/qc_trim_align.yml"
+    log: "results/logs/snakelogs/fastqc_reads.{sample}.log"
+    shell:
+        """
+        fastqc {input.fq1}
+        fastqc {input.fq2}
+        dir=$(dirname {input.fq1})
+        bsename=$(basename {input.fq1} .gz)
+        bsename=$(basename ${{bsename}} .fastq)
+        mv ${{dir}}/${{bsename}}_fastqc.html {output.html1}
+        mv ${{dir}}/${{bsename}}_fastqc.zip {output.zip1}
+        bsename=$(basename {input.fq2} .gz)
+        bsename=$(basename ${{bsename}} .fastq)
+        mv ${{dir}}/${{bsename}}_fastqc.html {output.html2}
+        mv ${{dir}}/${{bsename}}_fastqc.zip {output.zip2}
+        """
+
+rule trim_reads_with_fastp:
+    input:
+        unpack(fq_dict_from_sample)
+    output:
+        trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
+        trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",
+        fastp_report="results/qc/fastp_reports/{sample}.html",
+        fastp_json="results/qc/fastp_reports/{sample}.json"
+    conda:
+        "envs/qc_trim_align.yml"
+    log: "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
+    shell:
+        """
+        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
+        """
+
+rule align_reads_with_bwamem:
+    input:
+        R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
+        R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
+    params:
+        genome=config["bwa_genome"]
+    output:
+        bam="results/aligned/{sample}.bam",
+        bai="results/aligned/{sample}.bam.bai"
+    conda:
+        "envs/qc_trim_align.yml"
+    log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
+    shell:
+        """
+        bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
+        samtools index -@ 12 {output.bam} > {output.bai}
+        """
+
+##################################################################
+##                        MACS2 peak calling                    ##
+##################################################################
+
+rule call_peaks_with_macs2:
+    input:
+        unpack(sample_type_dict_from_sample)
+    output:
+        "results/macs2_broadPeaks/{sample}_peaks.broadPeak"
+    params:
+        effective_genome_size=config["effective_genome_size"],
+        sample_name="{sample}",
+        minimum_FDR_cutoff=config["macs2_minimum_fdr"]
+    conda:
+        "envs/peak_calling.yml"
+    log: "results/logs/snakelogs/call_peaks_with_macs2.{sample}.log"
+    shell:
+        """
+        macs2 callpeak -t {input.treatment} -c {input.control} -f BAMPE -g {params.effective_genome_size} -n {params.sample_name}_{params.minimum_FDR_cutoff} -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2_broadPeaks/
+        """
+
+##################################################################
+##                        BigWig creation                       ##
+##################################################################
+
+rule make_bigwig:
+    input:
+        bam="results/aligned/{sample}.bam"
+    output:
+        bigwig="results/bigwigs/{sample}.bw"
+    params:
+        bin_size=config["bin_size"]
+        min_mapping_quality=config["min_mapping_quality"]
+        genome_size=config["effective_genome_size"]
+        blacklistFile=config["blacklistFile"]
+    conda:
+        "envs/qc_trim_align.yml"
+    log: "results/logs/snakelogs/make_bigwig.{sample}.log"
+    shell:
+        """
+        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.min_mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
+        """

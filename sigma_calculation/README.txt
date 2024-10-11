@@ -5,4 +5,4 @@ sbatch eduSeq_sigmaCalculation.sh ../results/aligned/EduHU_HCT_TotalSheared_set2
 sbatch sigmaCalc_submit.sh
 
 # 3 - Normalize Sigma
-sbatch sigmaNorm.sh
+sbatch sigmaNorm_submit.sh

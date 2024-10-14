@@ -35,7 +35,8 @@ def sample_type_dict_from_sample(wildcards):
 def matched_files_from_sample(wildcards):
     return {
       "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam',
-      "sample_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam'
+      "sample_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
+      "sample_name": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"]
     }
 
 ##################################################################
@@ -163,7 +164,7 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_bin_counts="results/sigma/{sample}_adjusted_sample_counts.txt"
+        adjust_bin_counts="results/sigma/{sample_name}_adjusted_sample_counts.txt"
     log: "results/logs/snakelogs/run_bash_script.{sample}.log"
     shell:
         """

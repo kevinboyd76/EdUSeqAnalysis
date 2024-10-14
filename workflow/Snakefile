@@ -110,7 +110,8 @@ rule align_reads_with_bwamem:
         bam="results/aligned/{sample}.bam",
         bai="results/aligned/{sample}.bam.bai"
     envmodules:
-        config["bwa"]
+        config["bwa"],
+        config["samtools"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """

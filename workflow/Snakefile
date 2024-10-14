@@ -35,7 +35,7 @@ def sample_type_dict_from_sample(wildcards):
 def matched_files_from_sample(wildcards):
     sample_row = samples_table.loc[wildcards.sample]
     return {
-        "adjust_sam": f"results/aligned/{sample_row['control']}.sam",
+        "adjust_sam": f"results/aligned/{sample_row['Control']}.sam",
         "sample_sam": f"results/aligned/{sample_row['sample']}.sam"
     }
 

@@ -50,7 +50,7 @@ rule all:
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=samples_table.index)
+        expand("results/sigma/{sample_name}_adjusted_sample_counts.txt", sample=samples_table.index)
 
 
 ##################################################################

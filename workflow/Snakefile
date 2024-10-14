@@ -50,7 +50,7 @@ rule all:
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=samples_table.index)
+        expand("results/sigma/{sample_sam}_adjusted_sample_counts.txt", sample=samples_table.index)
 
 
 ##################################################################
@@ -164,8 +164,8 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_bin_counts="results/adjust/{sample}_adjust_bin_counts.txt"
-    log: "results/logs/snakelogs/run_bash_script.{sample}.log"
+        adjust_bin_counts="results/adjust/{sample_sam}_adjusted_sample_counts.txt"
+    log: "results/logs/snakelogs/run_bash_script.{sample_sam}.log"
     shell:
         """
         bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.sample_sam}

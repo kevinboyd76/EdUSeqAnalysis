@@ -168,5 +168,5 @@ rule gen_sigma_values:
     log: "results/logs/snakelogs/run_bash_script.{sample}.log"
     shell:
         """
-        bash scripts/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.sample_sam}
+        bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.sample_sam}
         """

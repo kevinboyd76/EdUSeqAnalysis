@@ -164,7 +164,7 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_bin_counts="results/adjust/{sample_sam}_adjusted_sample_counts.txt"
+        adjust_bin_counts="results/sigma/{sample_sam}_adjusted_sample_counts.txt"
     log: "results/logs/snakelogs/run_bash_script.{sample_sam}.log"
     shell:
         """

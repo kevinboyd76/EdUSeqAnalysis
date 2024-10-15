@@ -33,9 +33,15 @@ def sample_type_dict_from_sample(wildcards):
 
 # Define the sample-control matching from samples.csv for sigma calculation
 def matched_files_from_sample(wildcards):
+    # Ensure you access the original samples_table rather than samples_table2 for controls
+    control_sample = samples_table.loc[wildcards.sample, "Control"]
+    
+    if control_sample == 'NA':
+        raise ValueError(f"No control sample found for {wildcards.sample}")
+    
     return {
-      "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam',
-      "sample_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam'
+        "adjust_sam": 'results/aligned/' + control_sample + '.sam',
+        "sample_sam": 'results/aligned/' + wildcards.sample + '.sam'
     }
 
 ##################################################################

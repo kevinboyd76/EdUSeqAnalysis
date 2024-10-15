@@ -55,11 +55,11 @@ rule all:
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index),
-        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_all_EU_0b.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_qual_counts_EU_0b.txt", sample=treatment_samples.index)
+        expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index)#,
+        #expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
+        #expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
+        #expand("results/sigma/{sample}_sigma_all_EU_0b.csv", sample=treatment_samples.index),
+        #expand("results/sigma/{sample}_sigma_qual_counts_EU_0b.txt", sample=treatment_samples.index)
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##
@@ -183,22 +183,3 @@ rule gen_sigma_values:
         bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
         """
 
-##################################################################
-##                      Sigma Post Processing                   ##
-##################################################################
-
-rule sigma_post_processing:
-    input:
-        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{sample}_adjust.csv"
-    output:
-        sigma_output="results/sigma/{sample}_sigma_output.csv",
-        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv",
-        all_sigma="results/sigma/{sample}_sigma_all_EU_0b.csv",
-        qual_counts="results/sigma/{sample}_sigma_qual_counts_EU_0b.txt"
-    params:
-        work_dir="results/sigma"
-    log: "results/logs/snakelogs/sigma_post_processing.{sample}.log"
-    script:
-        "python sigma_calculation/sigma_post_processing.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}"

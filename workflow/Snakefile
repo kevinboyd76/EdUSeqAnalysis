@@ -38,6 +38,9 @@ def matched_files_from_sample(wildcards):
     "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
   }
 
+# Create a filtered subset of samples (e.g., only treatment samples)
+treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
+
 ##################################################################
 ##                          Rule All                            ##
 ##################################################################
@@ -49,7 +52,7 @@ rule all:
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=samples_table.index)
+        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index)
 
 
 ##################################################################

@@ -9,19 +9,19 @@ module load samtools
 module load bedtools
 module load deeptools
 
-# Define variables
+# Define variables passed from Snakemake
 BIN_SIZE=10000  # Bin size in base pairs
 QUALITY=60      # Minimum mapping quality
-WORK_DIR="/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/sigma_calclulation"
-CHROM_SIZES="/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/resources/hg38.chrom.sizes"
+CHROM_SIZES="/path/to/hg38.chrom.sizes"  # Update this to the actual location
 
 # Input SAM files
 ADJUST_SAM=$1  # Total sheared DNA SAM file
 SAMPLE_SAM=$2  # Edu-labeled SAM file
+WORK_DIR=$3    # Working directory passed from Snakemake
 
 # Check if the input files are provided
-if [[ $# -lt 2 ]]; then
-    echo "Usage: sbatch eduseq_pipeline.sh <adjust_file.sam> <sample_file.sam>"
+if [[ $# -lt 3 ]]; then
+    echo "Usage: sbatch eduseq_pipeline.sh <adjust_file.sam> <sample_file.sam> <work_dir>"
     exit 1
 fi
 
@@ -144,4 +144,3 @@ fi
 
 # Final message
 echo "EduSeq analysis pipeline complete."
-

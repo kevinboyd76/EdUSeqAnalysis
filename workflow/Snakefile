@@ -13,6 +13,8 @@ import pandas as pd
 
 # read the CSV file and set an index using the values in the "sample" column.
 samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
+# Ensure the 'Control' column is treated as strings
+samples_table['Control'] = samples_table['Control'].astype(str)
 
 # fastq filename input function definition set to Python dictionary
 def fq_dict_from_sample(wildcards):

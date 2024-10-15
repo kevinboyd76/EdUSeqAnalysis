@@ -171,20 +171,17 @@ rule make_bigwig:
 
 rule gen_sigma_values:
     input:
-        unpack(matched_files_from_sample)  # This pulls both treatment and control .sam files
+        unpack(matched_files_from_sample)
     output:
-        # Adjusted sample counts and sample bin counts use the treatment sample name
         adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        # Adjust file uses the control sample name
         adjust_csv="results/sigma/{control}_adjust.csv"
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"
     wildcard_constraints:
-        control="|".join(samples_table['Control'].unique())  # This ensures control wildcard is valid
+        control="|".join(samples_table['Control'].dropna().unique().astype(str))  # Drop NaNs and ensure control names are strings
     shell:
         """
         bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
         """
-

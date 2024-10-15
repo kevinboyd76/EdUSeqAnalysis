@@ -54,8 +54,8 @@ rule all:
         expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index)#,
+        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index)#,
+        #expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index),
         #expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
         #expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
         #expand("results/sigma/{sample}_sigma_all_EU_0b.csv", sample=treatment_samples.index),
@@ -173,8 +173,8 @@ rule gen_sigma_values:
         unpack(matched_files_from_sample)
     output:
         adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{sample}_adjust.csv"
+        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt"#,
+        #adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"

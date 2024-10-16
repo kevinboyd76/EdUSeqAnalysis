@@ -181,7 +181,9 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        unpack(matched_files_for_sigma)
+        adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"

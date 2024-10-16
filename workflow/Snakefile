@@ -13,8 +13,6 @@ import pandas as pd
 
 # read the CSV file and set an index using the values in the "sample" column.
 samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
-# Ensure the 'Control' column is treated as strings
-samples_table['Control'] = samples_table['Control'].astype(str)
 
 # fastq filename input function definition set to Python dictionary
 def fq_dict_from_sample(wildcards):
@@ -177,12 +175,10 @@ rule gen_sigma_values:
     output:
         adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{control}_adjust.csv"
+        adjust_csv=expand("results/sigma/{control}_adjust.csv", control=samples_table2['Control'][wildcards.sample])  # Pre-expanding based on control sample name
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"
-    wildcard_constraints:
-        control="|".join(samples_table['Control'].dropna().unique().astype(str))  # Drop NaNs and ensure control names are strings
     shell:
         """
         bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}

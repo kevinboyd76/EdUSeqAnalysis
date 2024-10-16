@@ -60,7 +60,7 @@ rule all:
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
-        expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
+        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
@@ -138,7 +138,9 @@ rule call_peaks_with_macs2:
     input:
         unpack(sample_type_dict_from_sample)
     output:
-        "results/macs2/{sample}.macs2Peaks"
+        "results/macs2/{sample}_0.05_peaks.xls",
+        "results/macs2/{sample}_0.05_peaks.broadPeak",
+        "results/macs2/{sample}_0.05_peaks.gappedPeak"
     params:
         effective_genome_size=config["effective_genome_size"],
         sample_name="{sample}",

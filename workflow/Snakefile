@@ -175,7 +175,7 @@ rule gen_sigma_values:
     output:
         adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv=expand("results/sigma/{control}_adjust.csv", control=samples_table2['Control'][wildcards.sample])  # Pre-expanding based on control sample name
+        adjust_csv=lambda wildcards: "results/sigma/{control}_adjust.csv".format(control=samples_table2.loc[wildcards.sample, "Control"])
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"

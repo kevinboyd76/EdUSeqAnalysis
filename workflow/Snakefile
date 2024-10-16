@@ -172,7 +172,7 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_bin_counts="results/sigma/{sample}_adjusted_sample_counts.txt"
+        adjust_bin_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt"
     params:
         work_dir="results/sigma"  # Define the working directory dynamically

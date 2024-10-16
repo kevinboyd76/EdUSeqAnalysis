@@ -175,11 +175,17 @@ rule gen_sigma_values:
     output:
         adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv=lambda wildcards: "results/sigma/{control}_adjust.csv".format(control=samples_table2.loc[wildcards.sample, "Control"])
+        # Placeholder for control adjust file
+        adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"
-    shell:
-        """
-        bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
-        """
+    run:
+        # Define the control adjust file dynamically
+        control_sample = samples_table2.loc[wildcards.sample, "Control"]
+        control_adjust_csv = f"results/sigma/{control_sample}_adjust.csv"
+
+        # Now execute the shell command using the dynamically created control_adjust_csv
+        shell(f"""
+            bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir} {control_adjust_csv}
+        """)

@@ -54,8 +54,8 @@ rule all:
         expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index)#,
+        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index)
+        #expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index),
         #expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
         #expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
         #expand("results/sigma/{sample}_sigma_all_EU_0b.csv", sample=treatment_samples.index),
@@ -172,19 +172,12 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        # Placeholder for control adjust file
-        adjust_csv="results/sigma/{sample}_adjust.csv"
+        adjust_bin_counts="results/sigma/{sample}_adjusted_sample_counts.txt"
+        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt"
     params:
-        work_dir="results/sigma"
+        work_dir="results/sigma"  # Define the working directory dynamically
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"
-    run:
-        # Define the control adjust file dynamically
-        control_sample = samples_table2.loc[wildcards.sample, "Control"]
-        control_adjust_csv = f"results/sigma/{control_sample}_adjust.csv"
-
-        # Now execute the shell command using the dynamically created control_adjust_csv
-        shell(f"""
-            bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir} {control_adjust_csv}
-        """)
+    shell:
+        """
+        bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
+        """

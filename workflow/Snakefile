@@ -35,7 +35,8 @@ def sample_type_dict_from_sample(wildcards):
 def matched_files_from_sample(wildcards):
   return {
     "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
-    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
+    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam',
+    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "Control"] + '_adjust.csv'
   }
 
 # Define the sample-adjust file matching from samples.csv for sigma post processing
@@ -179,8 +180,7 @@ rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_bin_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt"
+        unpack(matched_files_for_sigma)
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"

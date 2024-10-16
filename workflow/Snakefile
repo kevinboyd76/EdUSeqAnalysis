@@ -64,6 +64,7 @@ rule all:
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
+        expand("results/sigma/{sample}_adjust.csv", sample=adjust_samples.index),
         expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sigma_all_EU_0b.csv", sample=treatment_samples.index),

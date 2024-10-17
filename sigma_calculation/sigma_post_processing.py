@@ -151,4 +151,4 @@ with open(qual_counts_eu_output, 'w') as qual_file:
     qual_file.write(f"Total adjusted hits: {total_adjust_hits}\n")
     qual_file.write(f"Correction factor: {CORRECTION_FACTOR}\n")
 
-logging.info(f"Combined sigma calculation script complete.")
+logging.info(f"Sigma Post Processing Complete.")

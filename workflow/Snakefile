@@ -119,7 +119,7 @@ rule align_stats_gen_sam:
     input:
         bam="results/aligned/{sample}.bam"
     output:
-        sam="results/aligned/{sample}.sam"
+        sam="results/aligned/{sample}.sam",
         stats="results/aligned/{sample}_flagstat.txt"
     envmodules:
         config["samtools"]

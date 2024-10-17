@@ -205,4 +205,6 @@ rule sigma_post_processing:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/sigma_post_processing.{sample}.log"
     script:
-        "python sigma_calculation/sigma_post_processing.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}"
+        """
+        python sigma_calculation/sigma_post_processing.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}"
+        """

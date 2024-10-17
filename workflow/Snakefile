@@ -101,12 +101,12 @@ rule align_reads_with_bwamem:
         bam="results/aligned/{sample}.bam",
         bai="results/aligned/{sample}.bam.bai"
     envmodules:
-        config["bwa"],
+        config["bwamem2"],
         config["samtools"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
+        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
         samtools index -@ 12 {output.bam} > {output.bai}
         """
 

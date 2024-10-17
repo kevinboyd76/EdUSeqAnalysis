@@ -60,6 +60,7 @@ rule all:
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
+        expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
         expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
@@ -111,20 +112,22 @@ rule align_reads_with_bwamem:
         """
 
 ##################################################################
-##                           Bam to Sam                         ##
+##                   Align Stats & Generate Sam                 ##
 ##################################################################
 
-rule bam_to_sam:
+rule align_stats_gen_sam:
     input:
         bam="results/aligned/{sample}.bam"
     output:
         sam="results/aligned/{sample}.sam"
+        stats="results/aligned/{sample}_flagstat.txt"
     envmodules:
         config["samtools"]
-    log: "results/logs/snakelogs/bam_to_sam.{sample}.log"
+    log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
     shell:
         """
         samtools view -h -o {output.sam} {input.bam}
+        samtools flagstat {input.bam} > {output.stats}
         """
 
 ##################################################################

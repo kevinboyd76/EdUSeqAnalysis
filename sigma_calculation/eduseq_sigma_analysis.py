@@ -14,9 +14,9 @@ CORRECTION_FACTOR = 1.0  # Placeholder for correction factor, can be adjusted la
 SCALE_FACTOR = 1000  # Scaling factor added to sigma calculation
 
 # Input variables from command-line arguments
-adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
-bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
-totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
+adjusted_counts_file = sys.argv[1]
+bin_counts_file = sys.argv[2]
+totalsheared_file = sys.argv[3]
 manual_max = float(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional manual y-axis maximum
 
 # Extract the basename from the adjusted counts input file (without extension)
@@ -107,7 +107,8 @@ merged_data = smooth_trim_sigma(merged_data)
 
 # Step 6: Convert sigma values to log2 scale and adjust the baseline
 def log2_convert_sigma(data, baseline_mean):
-    data['sigma_log2'] = np.log2(data['trimmed_sigma'] + baseline_mean)
+    # Ensure no negative or zero values are passed to log2 by adding a small constant to the data
+    data['sigma_log2'] = np.log2(np.maximum(data['trimmed_sigma'] + baseline_mean, 1e-9))
     return data
 
 baseline_mean = merged_data['trimmed_sigma'].mean()
@@ -130,7 +131,7 @@ with open(qual_counts_eu_output, 'w') as qual_file:
     qual_file.write(f"Baseline Mean (log2 adjusted): {baseline_mean}\n")
     qual_file.write(f"Total sample hits: {total_sample_hits}\n")
     qual_file.write(f"Total adjusted hits: {total_adjust_hits}\n")
-    qual_file.write(f"Correction factor: {CORRECTION_FACTOR}\n")
+    qual_file.write f"Correction factor: {CORRECTION_FACTOR}\n")
 
 # Step 8: Global and Local Maximum Calculation
 def calculate_global_local_max(df, num_bins=500):

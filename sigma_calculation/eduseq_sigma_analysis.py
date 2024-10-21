@@ -140,27 +140,27 @@ def calculate_global_local_max(df, num_bins=500):
 
 global_max, local_max = calculate_global_local_max(merged_data)
 
-# Step 9: Plotting Sigma Values
+# Step 9: Plotting Sigma Values as a Bar Plot
 def plot_sigma(data, y_max, local_max=None):
     plt.figure(figsize=(12, 6))
-    
-    # Plot the smoothed and trimmed sigma values
-    plt.plot(data['bin'], data['smoothed_sigma'], label="Smoothed Sigma", color='blue')
-    plt.plot(data['bin'], data['trimmed_sigma'], label="Trimmed Sigma", color='green', linestyle='--')
+
+    # Plot the smoothed and trimmed sigma values as bars
+    plt.bar(data['bin'], data['smoothed_sigma'], label="Smoothed Sigma", color='blue', alpha=0.6)
+    plt.bar(data['bin'], data['trimmed_sigma'], label="Trimmed Sigma", color='green', alpha=0.4)
 
     # Set plot limits based on the chosen maximum value
     plt.ylim(0, y_max)
-    
+
     # If we have local max data, we can highlight this region
     if local_max:
         plt.axhline(local_max, color='red', linestyle=':', label=f'Local Max ({local_max:.2f})')
-    
+
     # Plot titles and labels
     plt.title(f"Sigma Values for {sample_basename}")
     plt.xlabel('Bin')
     plt.ylabel('Sigma')
     plt.legend()
-    
+
     # Show plot
     plt.tight_layout()
     plt.show()
@@ -171,7 +171,7 @@ if manual_max:
 else:
     y_max = global_max  # Otherwise, default to the global maximum
 
-# Plot sigma values
+# Plot sigma values as bars
 plot_sigma(merged_data, y_max, local_max)
 
 # Save the plot to a file

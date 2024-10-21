@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=eduseq_analysis_pipeline
+#SBATCH --job-name=eduseq_bin_processing
 #SBATCH --time=10:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G

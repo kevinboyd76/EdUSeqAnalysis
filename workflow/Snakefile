@@ -177,7 +177,7 @@ rule make_bigwig:
 ##                         Bin Processing                       ##
 ##################################################################
 
-rule gen_sigma_values:
+rule bin_processing:
     input:
         unpack(matched_files_from_sample)
     output:

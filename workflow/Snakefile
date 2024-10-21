@@ -35,11 +35,21 @@ def sample_type_dict_from_sample(wildcards):
 def matched_files_from_sample(wildcards):
   return {
     "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
-    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
+    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam',
+    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "Control"] + '_adjust.csv'
+  }
+
+# Define the sample-adjust file matching from samples.csv for sigma post processing
+def matched_files_for_sigma(wildcards):
+  return {
+    "adjusted_sample_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjusted_sample_counts.txt',
+    "sample_bin_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_sample_bin_counts.txt',
+    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "Control"] + '_adjust.csv'
   }
 
 # Create a filtered subset of samples (e.g., only treatment samples)
 treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
+adjust_samples = samples_table[samples_table['sampleType'] == 'control']
 
 ##################################################################
 ##                          Rule All                            ##
@@ -50,10 +60,11 @@ rule all:
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
-        expand("results/macs2/{sample}.macs2Peaks", sample=samples_table2.index),
+        expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
+        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index)
-
+        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
+        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index)
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##
@@ -89,30 +100,32 @@ rule align_reads_with_bwamem:
         bam="results/aligned/{sample}.bam",
         bai="results/aligned/{sample}.bam.bai"
     envmodules:
-        config["bwa"],
+        config["bwamem2"],
         config["samtools"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
+        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
         samtools index -@ 12 {output.bam} > {output.bai}
         """
 
 ##################################################################
-##                           Bam to Sam                         ##
+##                   Align Stats & Generate Sam                 ##
 ##################################################################
 
-rule bam_to_sam:
+rule align_stats_gen_sam:
     input:
         bam="results/aligned/{sample}.bam"
     output:
-        sam="results/aligned/{sample}.sam"
+        sam="results/aligned/{sample}.sam",
+        stats="results/aligned/{sample}_flagstat.txt"
     envmodules:
         config["samtools"]
-    log: "results/logs/snakelogs/bam_to_sam.{sample}.log"
+    log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
     shell:
         """
         samtools view -h -o {output.sam} {input.bam}
+        samtools flagstat {input.bam} > {output.stats}
         """
 
 ##################################################################
@@ -123,7 +136,9 @@ rule call_peaks_with_macs2:
     input:
         unpack(sample_type_dict_from_sample)
     output:
-        "results/macs2/{sample}.macs2Peaks"
+        "results/macs2/{sample}_0.05_peaks.xls",
+        "results/macs2/{sample}_0.05_peaks.broadPeak",
+        "results/macs2/{sample}_0.05_peaks.gappedPeak"
     params:
         effective_genome_size=config["effective_genome_size"],
         sample_name="{sample}",
@@ -159,18 +174,20 @@ rule make_bigwig:
         """
 
 ##################################################################
-##                      Generate Sigma Values                   ##
+##                         Bin Processing                       ##
 ##################################################################
 
 rule gen_sigma_values:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_bin_counts="results/sigma/{sample}_adjusted_sample_counts.txt"
+        adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt"
     params:
-        work_dir="results/sigma"  # Define the working directory dynamically
-    log: "results/logs/snakelogs/gen_sigma_values.{sample}.log"
+        work_dir="results/sigma"
+    log: "results/logs/snakelogs/bin_processing.{sample}.log"
     shell:
         """
-        bash sigma_calculation/eduSeq_sigmaCalculation.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
         """
+

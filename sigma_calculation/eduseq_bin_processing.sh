@@ -12,7 +12,7 @@ module load deeptools
 # Define variables passed from Snakemake
 BIN_SIZE=10000  # Bin size in base pairs
 QUALITY=60      # Minimum mapping quality
-CHROM_SIZES="/path/to/hg38.chrom.sizes"  # Update this to the actual location
+CHROM_SIZES="/hpc-prj/cobre-dev-bio/boydk/reference_info/hg38/hg38.chrom.sizes"  # Update this to the actual location
 
 # Input SAM files
 ADJUST_SAM=$1  # Total sheared DNA SAM file

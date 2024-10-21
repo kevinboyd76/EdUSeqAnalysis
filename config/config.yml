@@ -1,15 +1,14 @@
 # aligner params
-bwa_genome: "/Volumes/shared-refs/hg19/bwa_7_6_indexed/hg19.fasta"
+bwa_genome: "/Volumes/shared-refs/gatk_resources/hg38/v0/bwa-mem2-index/Homo_sapiens_assembly38.fasta"
 # macs2 params
 effective_genome_size: 2913022398
 macs2_minimum_fdr: 0.05
 # bamCoverage params
 bin_size: 10000
 min_mapping_quality: 30
-effective_genome_size: 2913022398
 blacklistFile: "/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/resources/ENCFF356LFX.bed"
 # Modules
-bwa: "bwa/0.7.17"
+bwamem2: "bwa-mem2/2.0"
 fastqc: "fastqc/0.12.1"
 fastp: "fastp/0.23.2"
 samtools: "samtools/1.18"

@@ -131,7 +131,7 @@ with open(qual_counts_eu_output, 'w') as qual_file:
     qual_file.write(f"Baseline Mean (log2 adjusted): {baseline_mean}\n")
     qual_file.write(f"Total sample hits: {total_sample_hits}\n")
     qual_file.write(f"Total adjusted hits: {total_adjust_hits}\n")
-    qual_file.write f"Correction factor: {CORRECTION_FACTOR}\n")
+    qual_file.write(f"Correction factor: {CORRECTION_FACTOR}\n")
 
 # Step 8: Global and Local Maximum Calculation
 def calculate_global_local_max(df, num_bins=500):

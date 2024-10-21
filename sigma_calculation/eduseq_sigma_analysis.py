@@ -6,7 +6,7 @@ import sys
 import os
 
 # Set up logging
-logging.basicConfig(filename='edu_seq_analysis.log', level=logging.INFO)
+logging.basicConfig(filename='eduseq_sigma_analysis.log', level=logging.INFO)
 
 # Constants
 BIN_SIZE = 10000

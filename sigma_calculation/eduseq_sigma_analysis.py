@@ -17,6 +17,7 @@ adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_cou
 bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
 totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
 manual_max = float(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional manual y-axis maximum
+correction_factor = float(sys.argv[5]) if len(sys.argv) > 5 else None  # Optional manual correction factor
 
 # Extract the basename from the adjusted counts input file (without extension)
 sample_basename = os.path.basename(adjusted_counts_file).split('_adjusted_sample_counts.txt')[0]
@@ -52,17 +53,15 @@ merged_data = pd.merge(merged_data, totalsheared, on=["chromosome", "bin"])
 total_sample_reads = merged_data['bin_count_1'].sum()
 total_control_reads = merged_data['sheared_counts'].sum()
 
-# Step 2: Calculate or manually input the correction factor
-if len(sys.argv) > 5:  # If the user provides a manual correction factor
-    correction_factor = float(sys.argv[5])
-else:
+# Step 2: Calculate or use the provided correction factor
+if correction_factor is None:  # If not manually provided
     if total_control_reads > 0:
         correction_factor = total_sample_reads / total_control_reads
     else:
         logging.error(f"Total control reads is zero, unable to calculate correction factor.")
         sys.exit(1)
 
-logging.info(f"Correction factor calculated: {correction_factor}")
+logging.info(f"Correction factor: {correction_factor}")
 
 # Initialize columns for sigma calculations
 merged_data['sigma'] = 0
@@ -174,9 +173,10 @@ def plot_sigma(data, y_max, local_max=None):
     plt.ylabel('Sigma')
     plt.legend()
 
-    # Show plot
+    # Save plot directly without displaying it
     plt.tight_layout()
-    plt.show()
+    plt.savefig(output_plot_file)
+    logging.info(f"Plot saved to {output_plot_file}")
 
 # Step 11: Determine y_max for plot scaling
 if manual_max:
@@ -184,9 +184,5 @@ if manual_max:
 else:
     y_max = global_max  # Otherwise, default to the global maximum
 
-# Plot sigma values as bars
+# Plot sigma values as bars and save the plot
 plot_sigma(merged_data, y_max, local_max)
-
-# Save the plot to a file
-plt.savefig(output_plot_file)
-logging.info(f"Plot saved to {output_plot_file}")

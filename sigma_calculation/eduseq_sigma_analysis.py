@@ -13,9 +13,9 @@ BIN_SIZE = 10000
 SCALE_FACTOR = 1000  # Scaling factor added to sigma calculation
 
 # Input variables from command-line arguments
-adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
-bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
-totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
+adjusted_counts_file = sys.argv[1]
+bin_counts_file = sys.argv[2]
+totalsheared_file = sys.argv[3]
 manual_max = float(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional manual y-axis maximum
 correction_factor = float(sys.argv[5]) if len(sys.argv) > 5 else None  # Optional manual correction factor
 

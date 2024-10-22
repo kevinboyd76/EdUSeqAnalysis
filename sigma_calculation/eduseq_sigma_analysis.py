@@ -52,15 +52,15 @@ merged_data = pd.merge(merged_data, totalsheared, on=["chromosome", "bin"])
 total_sample_reads = merged_data['bin_count_1'].sum()
 total_control_reads = merged_data['sheared_counts'].sum()
 
-# manually input correction factor
-correction_factor = float(sys.argv[5]) if len(sys.argv) > 5 else (total_sample_reads / total_control_reads)
-
-# Step 2: Calculate the correction factor
-if total_control_reads > 0:
-    correction_factor = total_sample_reads / total_control_reads
+# Step 2: Calculate or manually input the correction factor
+if len(sys.argv) > 5:  # If the user provides a manual correction factor
+    correction_factor = float(sys.argv[5])
 else:
-    logging.error(f"Total control reads is zero, unable to calculate correction factor.")
-    sys.exit(1)
+    if total_control_reads > 0:
+        correction_factor = total_sample_reads / total_control_reads
+    else:
+        logging.error(f"Total control reads is zero, unable to calculate correction factor.")
+        sys.exit(1)
 
 logging.info(f"Correction factor calculated: {correction_factor}")
 
@@ -122,10 +122,6 @@ def log2_convert_sigma(data, baseline_mean, min_value=1e-9):
     # Add a small constant to avoid log2(0) or log2(negative numbers)
     data['sigma_log2'] = np.log2(data['trimmed_sigma'].clip(lower=min_value) + baseline_mean)
     return data
-
-baseline_mean = merged_data['trimmed_sigma'].mean()
-merged_data = log2_convert_sigma(merged_data, baseline_mean)
-
 
 baseline_mean = merged_data['trimmed_sigma'].mean()
 merged_data = log2_convert_sigma(merged_data, baseline_mean)

@@ -11,13 +11,13 @@ logging.basicConfig(filename='eduseq_sigma_analysis.log', level=logging.INFO)
 # Constants
 BIN_SIZE = 10000
 SCALE_FACTOR = 1000  # Scaling factor added to sigma calculation
+MIN_VALUE = 1e-9  # Small constant to avoid log issues
 
 # Input variables from command-line arguments
-adjusted_counts_file = sys.argv[1]
-bin_counts_file = sys.argv[2]
-totalsheared_file = sys.argv[3]
+adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
+bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
+totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
 manual_max = float(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional manual y-axis maximum
-correction_factor = float(sys.argv[5]) if len(sys.argv) > 5 else None  # Optional manual correction factor
 
 # Extract the basename from the adjusted counts input file (without extension)
 sample_basename = os.path.basename(adjusted_counts_file).split('_adjusted_sample_counts.txt')[0]
@@ -53,15 +53,17 @@ merged_data = pd.merge(merged_data, totalsheared, on=["chromosome", "bin"])
 total_sample_reads = merged_data['bin_count_1'].sum()
 total_control_reads = merged_data['sheared_counts'].sum()
 
-# Step 2: Calculate or use the provided correction factor
-if correction_factor is None:  # If not manually provided
+# Step 2: Calculate or manually input the correction factor
+if len(sys.argv) > 5:  # If the user provides a manual correction factor
+    correction_factor = float(sys.argv[5])
+else:
     if total_control_reads > 0:
         correction_factor = total_sample_reads / total_control_reads
     else:
         logging.error(f"Total control reads is zero, unable to calculate correction factor.")
         sys.exit(1)
 
-logging.info(f"Correction factor: {correction_factor}")
+logging.info(f"Correction factor calculated: {correction_factor}")
 
 # Initialize columns for sigma calculations
 merged_data['sigma'] = 0
@@ -120,6 +122,12 @@ merged_data = smooth_trim_sigma(merged_data)
 def log2_convert_sigma(data, baseline_mean, min_value=1e-9):
     # Add a small constant to avoid log2(0) or log2(negative numbers)
     data['sigma_log2'] = np.log2(data['trimmed_sigma'].clip(lower=min_value) + baseline_mean)
+    
+    # Log any remaining issues
+    invalid_entries = data[data['sigma_log2'].isnull()]
+    if not invalid_entries.empty:
+        logging.warning(f"Invalid log2 values encountered for the following entries: {invalid_entries}")
+    
     return data
 
 baseline_mean = merged_data['trimmed_sigma'].mean()
@@ -173,10 +181,9 @@ def plot_sigma(data, y_max, local_max=None):
     plt.ylabel('Sigma')
     plt.legend()
 
-    # Save plot directly without displaying it
+    # Show plot
     plt.tight_layout()
-    plt.savefig(output_plot_file)
-    logging.info(f"Plot saved to {output_plot_file}")
+    plt.show()
 
 # Step 11: Determine y_max for plot scaling
 if manual_max:
@@ -184,5 +191,9 @@ if manual_max:
 else:
     y_max = global_max  # Otherwise, default to the global maximum
 
-# Plot sigma values as bars and save the plot
+# Plot sigma values as bars
 plot_sigma(merged_data, y_max, local_max)
+
+# Save the plot to a file
+plt.savefig(output_plot_file)
+logging.info(f"Plot saved to {output_plot_file}")

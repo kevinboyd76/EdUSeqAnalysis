@@ -115,9 +115,14 @@ def smooth_trim_sigma(data, window_size=3, trim_factor=1.2):
 merged_data = smooth_trim_sigma(merged_data)
 
 # Step 7: Convert sigma values to log2 scale and adjust the baseline
-def log2_convert_sigma(data, baseline_mean):
-    data['sigma_log2'] = np.log2(data['trimmed_sigma'] + baseline_mean)
+def log2_convert_sigma(data, baseline_mean, min_value=1e-9):
+    # Add a small constant to avoid log2(0) or log2(negative numbers)
+    data['sigma_log2'] = np.log2(data['trimmed_sigma'].clip(lower=min_value) + baseline_mean)
     return data
+
+baseline_mean = merged_data['trimmed_sigma'].mean()
+merged_data = log2_convert_sigma(merged_data, baseline_mean)
+
 
 baseline_mean = merged_data['trimmed_sigma'].mean()
 merged_data = log2_convert_sigma(merged_data, baseline_mean)

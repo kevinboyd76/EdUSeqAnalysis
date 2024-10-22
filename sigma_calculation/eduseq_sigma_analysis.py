@@ -52,6 +52,9 @@ merged_data = pd.merge(merged_data, totalsheared, on=["chromosome", "bin"])
 total_sample_reads = merged_data['bin_count_1'].sum()
 total_control_reads = merged_data['sheared_counts'].sum()
 
+# manually input correction factor
+correction_factor = float(sys.argv[5]) if len(sys.argv) > 5 else (total_sample_reads / total_control_reads)
+
 # Step 2: Calculate the correction factor
 if total_control_reads > 0:
     correction_factor = total_sample_reads / total_control_reads

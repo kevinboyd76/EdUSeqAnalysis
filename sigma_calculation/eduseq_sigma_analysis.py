@@ -10,13 +10,12 @@ logging.basicConfig(filename='eduseq_sigma_analysis.log', level=logging.INFO)
 
 # Constants
 BIN_SIZE = 10000
-CORRECTION_FACTOR = 1.0  # Placeholder for correction factor, can be adjusted later
 SCALE_FACTOR = 1000  # Scaling factor added to sigma calculation
 
 # Input variables from command-line arguments
-adjusted_counts_file = sys.argv[1]
-bin_counts_file = sys.argv[2]
-totalsheared_file = sys.argv[3]
+adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
+bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
+totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
 manual_max = float(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional manual y-axis maximum
 
 # Extract the basename from the adjusted counts input file (without extension)
@@ -49,13 +48,26 @@ except Exception as e:
 merged_data = pd.merge(adjusted_counts, bin_counts, on=["chromosome", "bin"])
 merged_data = pd.merge(merged_data, totalsheared, on=["chromosome", "bin"])
 
+# Calculate total reads in the sample and control to compute the correction factor
+total_sample_reads = merged_data['bin_count_1'].sum()
+total_control_reads = merged_data['sheared_counts'].sum()
+
+# Step 2: Calculate the correction factor
+if total_control_reads > 0:
+    correction_factor = total_sample_reads / total_control_reads
+else:
+    logging.error(f"Total control reads is zero, unable to calculate correction factor.")
+    sys.exit(1)
+
+logging.info(f"Correction factor calculated: {correction_factor}")
+
 # Initialize columns for sigma calculations
 merged_data['sigma'] = 0
 
-# Step 2: Calculate sigma values
+# Step 3: Calculate sigma values, applying the correction factor
 for index, row in merged_data.iterrows():
     if row['sheared_counts'] > 0:  # Avoid division by zero
-        sigma = (row['bin_count_1'] / row['sheared_counts']) * SCALE_FACTOR
+        sigma = (row['bin_count_1'] / row['sheared_counts']) * SCALE_FACTOR * correction_factor
         merged_data.at[index, 'sigma'] = sigma
 
 # Save the sigma output to a new CSV file
@@ -63,16 +75,13 @@ logging.info(f"Saving sigma calculations to {output_file}")
 merged_data.to_csv(output_file, index=False)
 
 # Write the quality counts to a separate file
-total_sample_hits = merged_data['bin_count_1'].sum()
-total_adjust_hits = merged_data['sheared_counts'].sum()
-
 with open(qual_counts_output, 'w') as qc_file:
     qc_file.write(f"Bin size: {BIN_SIZE}\n")
-    qc_file.write(f"Total sample hits: {total_sample_hits}\n")
-    qc_file.write(f"Total adjusted hits: {total_adjust_hits}\n")
-    qc_file.write(f"Correction factor: {CORRECTION_FACTOR}\n")
+    qc_file.write(f"Total sample hits: {total_sample_reads}\n")
+    qc_file.write(f"Total adjusted hits: {total_control_reads}\n")
+    qc_file.write(f"Correction factor: {correction_factor}\n")
 
-# Step 3: Percentile-based smoothing (background noise)
+# Step 4: Percentile-based smoothing (background noise)
 all_non0_adjbin = merged_data[merged_data['sheared_counts'] != 0]['adjusted_1'].tolist()
 sort_all_non0_adjbin = sorted(all_non0_adjbin)
 
@@ -86,14 +95,14 @@ def find_background_noise(sorted_adjbin, low_percentile=9, high_percentile=99):
 
 background_low, background_high = find_background_noise(sort_all_non0_adjbin)
 
-# Step 4: Adjust sigma based on background noise
+# Step 5: Adjust sigma based on background noise
 def calculate_sigma_with_background(data, background_low, background_high):
     data['sigma_mb'] = (data['adjusted_1'] - background_low) / (background_high - background_low)
     return data
 
 merged_data = calculate_sigma_with_background(merged_data, background_low, background_high)
 
-# Step 5: Smooth and trim sigma values
+# Step 6: Smooth and trim sigma values
 def smooth_trim_sigma(data, window_size=3, trim_factor=1.2):
     data['smoothed_sigma'] = data['sigma_mb'].rolling(window=window_size, center=True).mean()
     
@@ -105,16 +114,15 @@ def smooth_trim_sigma(data, window_size=3, trim_factor=1.2):
 
 merged_data = smooth_trim_sigma(merged_data)
 
-# Step 6: Convert sigma values to log2 scale and adjust the baseline
+# Step 7: Convert sigma values to log2 scale and adjust the baseline
 def log2_convert_sigma(data, baseline_mean):
-    # Ensure no negative or zero values are passed to log2 by adding a small constant to the data
-    data['sigma_log2'] = np.log2(np.maximum(data['trimmed_sigma'] + baseline_mean, 1e-9))
+    data['sigma_log2'] = np.log2(data['trimmed_sigma'] + baseline_mean)
     return data
 
 baseline_mean = merged_data['trimmed_sigma'].mean()
 merged_data = log2_convert_sigma(merged_data, baseline_mean)
 
-# Step 7: Save final output files
+# Step 8: Save final output files
 logging.info(f"Saving final sigma calculations to {select_output_file}")
 merged_data.to_csv(select_output_file, index=False)
 
@@ -129,11 +137,11 @@ with open(qual_counts_eu_output, 'w') as qual_file:
     qual_file.write(f"Background Noise (Low): {background_low}\n")
     qual_file.write(f"Background Noise (High): {background_high}\n")
     qual_file.write(f"Baseline Mean (log2 adjusted): {baseline_mean}\n")
-    qual_file.write(f"Total sample hits: {total_sample_hits}\n")
-    qual_file.write(f"Total adjusted hits: {total_adjust_hits}\n")
-    qual_file.write(f"Correction factor: {CORRECTION_FACTOR}\n")
+    qual_file.write(f"Total sample hits: {total_sample_reads}\n")
+    qual_file.write(f"Total adjusted hits: {total_control_reads}\n")
+    qual_file.write(f"Correction factor: {correction_factor}\n")
 
-# Step 8: Global and Local Maximum Calculation
+# Step 9: Global and Local Maximum Calculation
 def calculate_global_local_max(df, num_bins=500):
     global_max = df['smoothed_sigma'].max()  # Use smoothed_sigma for scaling
     local_max = df['smoothed_sigma'][:num_bins].max()  # First `num_bins` for local scaling
@@ -141,7 +149,7 @@ def calculate_global_local_max(df, num_bins=500):
 
 global_max, local_max = calculate_global_local_max(merged_data)
 
-# Step 9: Plotting Sigma Values as a Bar Plot
+# Step 10: Plotting Sigma Values as a Bar Plot
 def plot_sigma(data, y_max, local_max=None):
     plt.figure(figsize=(12, 6))
 
@@ -166,7 +174,7 @@ def plot_sigma(data, y_max, local_max=None):
     plt.tight_layout()
     plt.show()
 
-# Step 10: Determine y_max for plot scaling
+# Step 11: Determine y_max for plot scaling
 if manual_max:
     y_max = manual_max  # Use the manually provided maximum if specified
 else:

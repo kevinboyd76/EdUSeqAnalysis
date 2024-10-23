@@ -132,15 +132,15 @@ sort -k1,1 -k2,2n "${WORK_DIR}/${SAMPLE_PREFIX}.bedGraph" > "${WORK_DIR}/${SAMPL
 echo "Step 7 complete. bedGraph created from adjusted counts."
 
 # Step 8: Convert sorted bedGraph to BigWig
-echo "Step 8: Creating BigWig file from sorted bedGraph..."
+#echo "Step 8: Creating BigWig file from sorted bedGraph..."
 
-bedGraphToBigWig "${WORK_DIR}/${SAMPLE_PREFIX}_sorted.bedGraph" "$CHROM_SIZES" "${WORK_DIR}/${SAMPLE_PREFIX}.bw"
+#bedGraphToBigWig "${WORK_DIR}/${SAMPLE_PREFIX}_sorted.bedGraph" "$CHROM_SIZES" "${WORK_DIR}/${SAMPLE_PREFIX}.bw"
 
-if [[ -f "${WORK_DIR}/${SAMPLE_PREFIX}.bw" ]]; then
-    echo "Step 8 complete. BigWig file created: ${WORK_DIR}/${SAMPLE_PREFIX}.bw"
-else
-    echo "Error: BigWig file creation failed."
-fi
+#if [[ -f "${WORK_DIR}/${SAMPLE_PREFIX}.bw" ]]; then
+#    echo "Step 8 complete. BigWig file created: ${WORK_DIR}/${SAMPLE_PREFIX}.bw"
+#else
+#    echo "Error: BigWig file creation failed."
+#fi
 
 # Final message
 echo "EduSeq analysis pipeline complete."

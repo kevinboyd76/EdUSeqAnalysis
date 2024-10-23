@@ -190,7 +190,7 @@ rule bin_processing:
     log: "results/logs/snakelogs/bin_processing.{sample}.log"
     shell:
         """
-        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir} {output.adjust_csv}
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
         """
 
 ##################################################################

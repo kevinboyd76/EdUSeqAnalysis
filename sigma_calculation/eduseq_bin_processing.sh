@@ -18,6 +18,7 @@ CHROM_SIZES="/hpc-prj/cobre-dev-bio/boydk/reference_info/hg38/hg38.chrom.sizes" 
 ADJUST_SAM=$1  # Total sheared DNA SAM file
 SAMPLE_SAM=$2  # Edu-labeled SAM file
 WORK_DIR=$3    # Working directory passed from Snakemake
+ADJUST_CSV=$4  # define control csv file output
 
 # Check if the input files are provided
 if [[ $# -lt 3 ]]; then
@@ -67,8 +68,8 @@ awk '
 {
     adjust_hits = $3 + $4;  # sum of forward and reverse hits
     print $1 "," $2 "," adjust_hits;
-}' "${WORK_DIR}/${ADJUST_PREFIX}_adjust_bin_counts.txt" > "${WORK_DIR}/${SAMPLE_PREFIX}_adjust.csv"
-echo "Step 3 complete. Adjust CSV file created: ${WORK_DIR}/${SAMPLE_PREFIX}_adjust.csv."
+}' "${WORK_DIR}/${ADJUST_PREFIX}_adjust_bin_counts.txt" > "${WORK_DIR}/${ADJUST_CSV}"
+echo "Step 3 complete. Adjust CSV file created: ${WORK_DIR}/${ADJUST_CSV}."
 
 # Step 4: Generate bin counts for Edu-labeled sample
 echo "Step 4: Generating bin counts for Edu-labeled sample $SAMPLE_SAM..."
@@ -102,7 +103,7 @@ awk -F'[ ,]' 'NR==FNR { adjust[$1","$2] = $3; next }
     adjbin_f = int($3 * 1000 / adjust_hits + 0.5);
     adjbin_r = int($4 * 1000 / adjust_hits + 0.5);
     print $1, $2, adjbin_f, adjbin_r;
-}' "${WORK_DIR}/${SAMPLE_PREFIX}_adjust.csv" "${WORK_DIR}/${SAMPLE_PREFIX}_sample_bin_counts.txt" > "${WORK_DIR}/${SAMPLE_PREFIX}_adjusted_sample_counts.txt"
+}' "${WORK_DIR}/${ADJUST_CSV}" "${WORK_DIR}/${SAMPLE_PREFIX}_sample_bin_counts.txt" > "${WORK_DIR}/${SAMPLE_PREFIX}_adjusted_sample_counts.txt"
 echo "Step 5 complete. Adjusted sample counts saved to ${WORK_DIR}/${SAMPLE_PREFIX}_adjusted_sample_counts.txt."
 
 # Step 6: Create a Bed file from adjusted counts

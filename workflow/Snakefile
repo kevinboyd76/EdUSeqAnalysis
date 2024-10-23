@@ -184,7 +184,7 @@ rule bin_processing:
     output:
         adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv=f"results/sigma/{str(samples_table2.loc[{{sample}}, "Control"])}_adjust.csv"
+        adjust_csv=f"results/sigma/{str(samples_table2.loc[{sample}, "Control"])}_adjust.csv"
     params:
         work_dir="results/sigma"
     log: "results/logs/snakelogs/bin_processing.{sample}.log"

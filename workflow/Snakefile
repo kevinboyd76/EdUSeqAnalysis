@@ -197,7 +197,7 @@ rule bin_processing:
 ##                         Sigma Analysis                       ##
 ##################################################################
 
-rule sigma_post_processing:
+rule sigma_analysis:
     input:
         adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
@@ -207,8 +207,8 @@ rule sigma_post_processing:
         select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
     params:
         work_dir="results/sigma"
-    log: "results/logs/snakelogs/sigma_post_processing.{sample}.log"
+    log: "results/logs/snakelogs/sigma_analysis.{sample}.log"
     shell:
         """
-        python sigma_calculation/sigma_post_processing.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}
+        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}
         """

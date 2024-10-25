@@ -17,18 +17,22 @@ MIN_VALUE = 1e-9  # Small constant to avoid log issues
 adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
 bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
 totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
-manual_max = float(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional manual y-axis maximum
+work_dir = sys.argv[4]              # Working directory for outputs
+manual_max = float(sys.argv[5]) if len(sys.argv) > 5 else None  # Optional manual y-axis maximum
+
+# Ensure the work directory exists
+os.makedirs(work_dir, exist_ok=True)
 
 # Extract the basename from the adjusted counts input file (without extension)
 sample_basename = os.path.basename(adjusted_counts_file).split('_adjusted_sample_counts.txt')[0]
 
 # Dynamically generate output file names based on the sample name
-output_file = f"{sample_basename}_sigma_output.csv"
-qual_counts_output = f"{sample_basename}_sigma_qual_counts.txt"
-select_output_file = f"{sample_basename}_sigma_select_EU_0b.csv"
-smoothed_output_file = f"{sample_basename}_sigma_all_EU_0b.csv"
-qual_counts_eu_output = f"{sample_basename}_sigma_qual_counts_EU_0b.txt"
-output_plot_file = f"{sample_basename}_sigma_plot.png"
+output_file = os.path.join(work_dir, f"{sample_basename}_sigma_output.csv")
+qual_counts_output = os.path.join(work_dir, f"{sample_basename}_sigma_qual_counts.txt")
+select_output_file = os.path.join(work_dir, f"{sample_basename}_sigma_select_EU_0b.csv")
+smoothed_output_file = os.path.join(work_dir, f"{sample_basename}_sigma_all_EU_0b.csv")
+qual_counts_eu_output = os.path.join(work_dir, f"{sample_basename}_sigma_qual_counts_EU_0b.txt")
+output_plot_file = os.path.join(work_dir, f"{sample_basename}_sigma_plot.png")
 
 # Step 1: Read input files
 try:

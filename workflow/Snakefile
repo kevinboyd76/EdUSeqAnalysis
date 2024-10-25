@@ -210,5 +210,5 @@ rule sigma_analysis:
     log: "results/logs/snakelogs/sigma_analysis.{sample}.log"
     shell:
         """
-        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}
+        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv}
         """

@@ -182,7 +182,7 @@ rule bin_processing:
     input:
         unpack(matched_files_from_sample)
     output:
-        adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
+        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
         adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
@@ -199,7 +199,7 @@ rule bin_processing:
 
 rule sigma_post_processing:
     input:
-        adjust_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
+        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
         adjust_csv="results/sigma/{sample}_adjust.csv"
     output:

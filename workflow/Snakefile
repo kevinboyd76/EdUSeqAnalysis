@@ -206,7 +206,7 @@ rule sigma_post_processing:
         sigma_output="results/sigma/{sample}_sigma_output.csv",
         select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
     log: "results/logs/snakelogs/sigma_post_processing.{sample}.log"
-    script:
+    shell:
         """
         python sigma_calculation/sigma_post_processing.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv}
         """

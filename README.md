@@ -24,8 +24,7 @@ sbatch --wrap="snakemake -j 999 --use-envmodules --latency-wait 30 --cluster-con
 
 # Explanation of Final Output
 {sample}_sigma_select_EU_0b.csv
-- Columns
-  - chromosome,bin,adjusted_1,adjusted_2,bin_count_1,bin_count_2,sheared_counts,sigma,sigma_mb,smoothed_sigma,trimmed_sigma,sigma_log2
+- Columns: chromosome,bin,adjusted_1,adjusted_2,bin_count_1,bin_count_2,sheared_counts,sigma,sigma_mb,smoothed_sigma,trimmed_sigma,sigma_log2
     +	Chromosome: The chromosome identifier
     +	Bin: Bin number to describe the specific genomic location
     +	Adjusted_1, Adjusted_2: These represent the adjusted hit counts from the Edu-labeled sample, in both forward and reverse directions, for the corresponding bin.

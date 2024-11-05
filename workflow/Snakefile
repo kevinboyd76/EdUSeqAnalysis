@@ -27,8 +27,8 @@ samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
 # sample_type input function definition set to Python dictionary
 def sample_type_dict_from_sample(wildcards):
   return {
-    "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
-    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.bam'
+    "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '_aligned.bam',
+    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '_aligned.bam'
   }
 
 # Define the sample-control matching from samples.csv for sigma calculation
@@ -38,17 +38,6 @@ def matched_files_from_sample(wildcards):
     "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '_filtered.sam'
   }
 
-# Define the sample-adjust file matching from samples.csv for sigma post processing
-def matched_files_for_sigma(wildcards):
-  return {
-    "adjusted_sample_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjusted_sample_counts.txt',
-    "sample_bin_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_sample_bin_counts.txt',
-    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjust.csv'
-  }
-
-# Create a filtered subset of samples (e.g., only treatment samples)
-treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
-adjust_samples = samples_table[samples_table['sampleType'] == 'control']
 
 ##################################################################
 ##                          Rule All                            ##
@@ -197,7 +186,7 @@ rule call_peaks_with_macs2:
 
 rule make_bigwig:
     input:
-        bam="results/aligned/{sample}.bam"
+        bam="results/aligned/{sample}_aligned.bam"
     output:
         bigwig="results/bigwigs/{sample}.bw"
     params:

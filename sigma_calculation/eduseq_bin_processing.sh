@@ -143,4 +143,4 @@ echo "Step 7 complete. bedGraph created from adjusted counts."
 #fi
 
 # Final message
-echo "EduSeq analysis pipeline complete."
+echo "Bin Processing Complete."

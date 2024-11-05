@@ -6,7 +6,7 @@ macs2_minimum_fdr: 0.05
 # bamCoverage params
 bin_size: 10000
 min_mapping_quality: 30
-blacklistFile: "/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/resources/ENCFF356LFX.bed"
+blacklistFile: "resources/Blacklist_XY.bed"
 # Modules
 bwamem2: "bwa-mem2/2.0"
 fastqc: "fastqc/0.12.1"

@@ -100,8 +100,8 @@ rule align_reads_with_bwamem:
     params:
         genome=config["bwa_genome"]
     output:
-        bam="results/aligned/{sample}.bam",
-        bai="results/aligned/{sample}.bam.bai"
+        bam="results/aligned/{sample}_aligned.bam",
+        bai="results/aligned/{sample}_aligned.bam.bai"
     envmodules:
         config["bwamem2"],
         config["samtools"]
@@ -118,12 +118,10 @@ rule align_reads_with_bwamem:
 
 rule align_stats_gen_sam:
     input:
-        bam="results/aligned/{sample}.bam"
+        bam="results/aligned/{sample}_aligned.bam"
     output:
         sam="results/aligned/{sample}.sam",
         stats="results/aligned/{sample}_flagstat.txt"
-    params:
-        blacklistFile=config["blacklistFile"]
     envmodules:
         config["samtools"]
     log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
@@ -139,7 +137,7 @@ rule align_stats_gen_sam:
 
 rule filter_bam_with_blacklist:
     input:
-        bam="results/aligned/{sample}.bam"
+        bam="results/aligned/{sample}_aligned.bam"
     output:
         filtered_bam="results/aligned/{sample}_filtered.bam"
     params:

@@ -121,7 +121,7 @@ rule align_stats_gen_sam:
     output:
         sam="results/aligned/{sample}.sam",
         stats="results/aligned/{sample}_flagstat.txt",
-        filtered_bam="results/aligned/{sample}_filtered.bam
+        filtered_bam="results/aligned/{sample}_filtered.bam"
     params:
         blacklistFile=config["blacklistFile"]
     envmodules:

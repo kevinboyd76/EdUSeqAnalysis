@@ -113,7 +113,7 @@ rule align_reads_with_bwamem:
         """
 
 ##################################################################
-##             Align Stats & Generate Sam and Filter            ##
+##                   Align Stats & Generate Sam                 ##
 ##################################################################
 
 rule align_stats_gen_sam:
@@ -121,18 +121,34 @@ rule align_stats_gen_sam:
         bam="results/aligned/{sample}.bam"
     output:
         sam="results/aligned/{sample}.sam",
-        stats="results/aligned/{sample}_flagstat.txt",
-        filtered_bam="results/aligned/{sample}_filtered.bam"
+        stats="results/aligned/{sample}_flagstat.txt"
     params:
         blacklistFile=config["blacklistFile"]
     envmodules:
-        config["samtools"],
-        config["bedtools"]
+        config["samtools"]
     log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
     shell:
         """
         samtools view -h -o {output.sam} {input.bam}
         samtools flagstat {input.bam} > {output.stats}
+        """
+
+##################################################################
+##                   Filter Bam with Blacklist                  ##
+##################################################################
+
+rule filter_bam_with_blacklist:
+    input:
+        bam="results/aligned/{sample}.bam"
+    output:
+        filtered_bam="results/aligned/{sample}_filtered.bam"
+    params:
+        blacklistFile=config["blacklistFile"]
+    envmodules:
+        config["bedtools"]
+    log: "results/logs/snakelogs/filter_bam_with_blacklist.{sample}.log"
+    shell:
+        """
         bedtools intersect -v -a {input.bam} -b {params.blacklistFile} > {output.filtered_bam}
         """
 

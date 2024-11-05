@@ -34,8 +34,8 @@ def sample_type_dict_from_sample(wildcards):
 # Define the sample-control matching from samples.csv for sigma calculation
 def matched_files_from_sample(wildcards):
   return {
-    "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
-    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
+    "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '_filtered.sam',
+    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '_filtered.sam'
   }
 
 # Define the sample-adjust file matching from samples.csv for sigma post processing
@@ -60,6 +60,7 @@ rule all:
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
+        expand("results/aligned/{sample}_filtered.bam, sample = samples_table.index),
         expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
@@ -111,7 +112,7 @@ rule align_reads_with_bwamem:
         """
 
 ##################################################################
-##                   Align Stats & Generate Sam                 ##
+##             Align Stats & Generate Sam and Filter            ##
 ##################################################################
 
 rule align_stats_gen_sam:
@@ -119,15 +120,38 @@ rule align_stats_gen_sam:
         bam="results/aligned/{sample}.bam"
     output:
         sam="results/aligned/{sample}.sam",
-        stats="results/aligned/{sample}_flagstat.txt"
+        stats="results/aligned/{sample}_flagstat.txt",
+        filtered_bam="results/aligned/{sample}_filtered.bam
+    params:
+        blacklistFile=config["blacklistFile"]
     envmodules:
-        config["samtools"]
+        config["samtools"],
+        config["bedtools"]
     log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
     shell:
         """
         samtools view -h -o {output.sam} {input.bam}
         samtools flagstat {input.bam} > {output.stats}
+        bedtools intersect -v -a {input.bam} -b {params.blacklistFile} > {output.filtered_bam}
         """
+
+##################################################################
+##                         Blacklist Sams                       ##
+##################################################################
+
+rule blacklist_sams:
+    input:
+        filtered_bam="results/aligned/{sample}_filtered.bam"
+    output:
+        filtered_sam="results/aligned/{sample}_filtered.sam"
+    envmodules:
+        config["samtools"]
+    log: "results/logs/snakelogs/blacklist_sams.{sample}.log"
+    shell:
+        """
+        samtools view -h -o {output.filtered_sam} {input.filtered_bam}
+        """
+
 
 ##################################################################
 ##                        MACS2 peak calling                    ##

@@ -73,10 +73,9 @@ logging.info(f"Correction factor calculated: {correction_factor}")
 merged_data['sigma'] = 0
 
 # Step 3: Calculate sigma values, applying the correction factor
-for index, row in merged_data.iterrows():
-    if row['sheared_counts'] > 0:  # Avoid division by zero
-        sigma = (row['bin_count_1'] / row['sheared_counts']) * SCALE_FACTOR * correction_factor
-        merged_data.at[index, 'sigma'] = sigma
+merged_data['sigma'] = merged_data.apply(
+    lambda row: (row['bin_count_1'] / row['sheared_counts']) * SCALE_FACTOR * correction_factor
+    if row['sheared_counts'] > 0 else 0, axis=1)
 
 # Save the sigma output to a new CSV file
 logging.info(f"Saving sigma calculations to {output_file}")

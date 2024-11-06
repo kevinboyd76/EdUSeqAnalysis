@@ -87,13 +87,13 @@ rule trim_reads_with_fastp:
 
 rule align_reads_with_bwamem:
     input:
-        R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
-        R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
+        R1="results/trimmed/{sample,[^.]+}_trimmed_R1.fastq.gz",
+        R2="results/trimmed/{sample,[^.]+}_trimmed_R2.fastq.gz"
     params:
         genome=config["bwa_genome"]
     output:
-        bam="results/aligned/{sample}.bam",
-        bai="results/aligned/{sample}.bam.bai"
+        bam="results/aligned/{sample,[^.]+}.bam",
+        bai="results/aligned/{sample,[^.]+}.bam.bai"
     envmodules:
         config["bwamem2"],
         config["samtools"]

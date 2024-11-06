@@ -32,21 +32,23 @@ def sample_type_dict_from_sample(wildcards):
   }
 
 # Define the sample-control matching from samples.csv for sigma calculation
+def matched_files_from_sample(wildcards):
+  return {
+    "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
+    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
+  }
+
+# Define the sample-adjust file matching from samples.csv for sigma post processing
 def matched_files_for_sigma(wildcards):
   return {
-    "treatment_sam": 'results/aligned/filtered/' + samples_table2.loc[wildcards.sample, "sample"] + '_blacklist.sam',
-    "adjust_sam": 'results/aligned/filtered/' + samples_table2.loc[wildcards.sample, "Control"] + '_blacklist.sam'
+    "adjusted_sample_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjusted_sample_counts.txt',
+    "sample_bin_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_sample_bin_counts.txt',
+    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjust.csv'
   }
 
 # Create a filtered subset of samples (e.g., only treatment samples)
 treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
 adjust_samples = samples_table[samples_table['sampleType'] == 'control']
-
-##################################################################
-##                Rule order for Blacklist Files                ##
-##################################################################
-
-ruleorder: align_reads_with_bwamem > blacklist_bams > blacklist_sams
 
 ##################################################################
 ##                          Rule All                            ##
@@ -58,8 +60,6 @@ rule all:
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
-        expand("results/filtered/{sample}_blacklist.bam", sample=samples_table.index),
-        expand("results/filtered/{sample}_blacklist.sam", sample=samples_table.index),
         expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
@@ -93,21 +93,26 @@ rule trim_reads_with_fastp:
 
 rule align_reads_with_bwamem:
     input:
-        R1="results/trimmed/{sample,[^.]+}_trimmed_R1.fastq.gz",
-        R2="results/trimmed/{sample,[^.]+}_trimmed_R2.fastq.gz"
+        R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
+        R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
     params:
-        genome=config["bwa_genome"]
+        genome=config["bwa_genome"],
+        blacklist=config["blacklistFile"]
     output:
-        bam="results/aligned/{sample,[^.]+}.bam",
-        bai="results/aligned/{sample,[^.]+}.bam.bai"
+        bam="results/aligned/{sample}.bam",
+        bai="results/aligned/{sample}.bam.bai"
     envmodules:
         config["bwamem2"],
-        config["samtools"]
+        config["samtools"],
+        config["bedtools"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
-        samtools index -@ 12 {output.bam} > {output.bai}
+        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} |        # Align to genome
+        samtools view -b - |                                                 # Convert to BAM format immediately
+        bedtools intersect -v -abam - -b {params.blacklist} |                # Exclude blacklist regions
+        samtools sort -@ 12 -o {output.bam}                                  # Sort the output
+        samtools index -@ 12 {output.bam}                                    # Index the blacklisted BAM
         """
 
 ##################################################################
@@ -127,42 +132,6 @@ rule align_stats_gen_sam:
         """
         samtools view -h -o {output.sam} {input.bam}
         samtools flagstat {input.bam} > {output.stats}
-        """
-
-##################################################################
-##                   Filter Bam with Blacklist                  ##
-##################################################################
-
-rule blacklist_bams:
-    input:
-        bam="results/aligned/{sample}.bam"
-    output:
-        filtered_bam="results/filtered/{sample}_blacklist.bam"
-    params:
-        blacklistFile=config["blacklistFile"]
-    envmodules:
-        config["bedtools"]
-    log: "results/logs/snakelogs/blacklist_bams.{sample}.log"
-    shell:
-        """
-        bedtools intersect -v -a {input.bam} -b {params.blacklistFile} > {output.filtered_bam}
-        """
-
-##################################################################
-##                         Blacklist Sams                       ##
-##################################################################
-
-rule blacklist_sams:
-    input:
-        filtered_bam="results/filtered/{sample}_blacklist.bam"
-    output:
-        filtered_sam="results/filtered/{sample}_blacklist.sam"
-    envmodules:
-        config["samtools"]
-    log: "results/logs/snakelogs/blacklist_sams.{sample}.log"
-    shell:
-        """
-        samtools view -h -o {output.filtered_sam} {input.filtered_bam}
         """
 
 ##################################################################
@@ -216,7 +185,7 @@ rule make_bigwig:
 
 rule bin_processing:
     input:
-        unpack(matched_files_for_sigma)
+        unpack(matched_files_from_sample)
     output:
         adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",

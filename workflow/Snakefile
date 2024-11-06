@@ -34,8 +34,8 @@ def sample_type_dict_from_sample(wildcards):
 # Define the sample-control matching from samples.csv for sigma calculation
 def matched_files_for_sigma(wildcards):
   return {
-    "treatment_sam": 'results/aligned/filtered/' + samples_table2.loc[wildcards.sample, "sample"] + '__blacklist.sam',
-    "adjust_sam": 'results/aligned/filtered/' + samples_table2.loc[wildcards.sample, "Control"] + '__blacklist.sam'
+    "treatment_sam": 'results/aligned/filtered/' + samples_table2.loc[wildcards.sample, "sample"] + '_blacklist.sam',
+    "adjust_sam": 'results/aligned/filtered/' + samples_table2.loc[wildcards.sample, "Control"] + '_blacklist.sam'
   }
 
 # Create a filtered subset of samples (e.g., only treatment samples)
@@ -58,8 +58,8 @@ rule all:
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
-        expand("results/aligned/filtered/{sample}__blacklist.bam", sample=samples_table.index),
-        expand("results/aligned/filtered/{sample}__blacklist.sam", sample=samples_table.index),
+        expand("results/filtered/{sample}_blacklist.bam", sample=samples_table.index),
+        expand("results/filtered/{sample}_blacklist.sam", sample=samples_table.index),
         expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
@@ -137,7 +137,7 @@ rule blacklist_bams:
     input:
         bam="results/aligned/{sample}.bam"
     output:
-        filtered_bam="results/aligned/filtered/{sample}__blacklist.bam"
+        filtered_bam="results/filtered/{sample}_blacklist.bam"
     params:
         blacklistFile=config["blacklistFile"]
     envmodules:
@@ -154,9 +154,9 @@ rule blacklist_bams:
 
 rule blacklist_sams:
     input:
-        filtered_bam="results/aligned/filtered/{sample}__blacklist.bam"
+        filtered_bam="results/filtered/{sample}_blacklist.bam"
     output:
-        filtered_sam="results/aligned/filtered/{sample}__blacklist.sam"
+        filtered_sam="results/filtered/{sample}_blacklist.sam"
     envmodules:
         config["samtools"]
     log: "results/logs/snakelogs/blacklist_sams.{sample}.log"

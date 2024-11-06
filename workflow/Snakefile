@@ -52,6 +52,8 @@ rule all:
         expand("results/aligned/{sample}.bam", sample = samples_table.index),
         expand("results/aligned/{sample}.sam", sample = samples_table.index),
         expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
+        expand("results/aligned/{sample}_filtered.bam", sample=samples_table.index),
+        expand("results/aligned/{sample}_filtered.sam", sample=samples_table.index),
         expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
         expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
@@ -119,6 +121,42 @@ rule align_stats_gen_sam:
         """
         samtools view -h -o {output.sam} {input.bam}
         samtools flagstat {input.bam} > {output.stats}
+        """
+
+##################################################################
+##                   Filter Bam with Blacklist                  ##
+##################################################################
+
+rule blacklist_bams:
+    input:
+        bam="results/aligned/{sample}.bam"
+    output:
+        filtered_bam="results/aligned/{sample}_filtered.bam"
+    params:
+        blacklistFile=config["blacklistFile"]
+    envmodules:
+        config["bedtools"]
+    log: "results/logs/snakelogs/blacklist_bams.{sample}.log"
+    shell:
+        """
+        bedtools intersect -v -a {input.bam} -b {params.blacklistFile} > {output.filtered_bam}
+        """
+
+##################################################################
+##                         Blacklist Sams                       ##
+##################################################################
+
+rule blacklist_sams:
+    input:
+        filtered_bam="results/aligned/{sample}_filtered.bam"
+    output:
+        filtered_sam="results/aligned/{sample}_filtered.sam"
+    envmodules:
+        config["samtools"]
+    log: "results/logs/snakelogs/blacklist_sams.{sample}.log"
+    shell:
+        """
+        samtools view -h -o {output.filtered_sam} {input.filtered_bam}
         """
 
 ##################################################################

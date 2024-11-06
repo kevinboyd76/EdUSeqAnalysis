@@ -43,6 +43,12 @@ treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
 adjust_samples = samples_table[samples_table['sampleType'] == 'control']
 
 ##################################################################
+##                Rule order for Blacklist Files                ##
+##################################################################
+
+ruleorder: align_reads_with_bwamem > blacklist_bams > blacklist_sams
+
+##################################################################
 ##                          Rule All                            ##
 ##################################################################
 

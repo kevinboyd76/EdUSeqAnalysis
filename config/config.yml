@@ -1,11 +1,10 @@
-# bin size and quality
+# bin size (10000) and mapping quality (30 / 60)
 bin_size: 10000
 mapping_quality: 60
-# blacklist used
+# blacklist file used
 blacklistFile: "resources/Blacklist_XY.bed"
-# aligner params for bwa mem2
+# params for hg38 genome assembly
 bwa_genome: "/Volumes/shared-refs/gatk_resources/hg38/v0/bwa-mem2-index/Homo_sapiens_assembly38.fasta"
-# peak calling params for macs2
 effective_genome_size: 2913022398
 macs2_minimum_fdr: 0.05
 # Modules

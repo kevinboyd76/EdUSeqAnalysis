@@ -229,7 +229,7 @@ rule create_bedgraphs:
     output:
         sigma_mb="results/sigma/{sample}_sigma_mb_sorted.bedGraph"
     params:
-        bin_size=config["BinSize"],
+        bin_size=config["bin_size"],
         work_dir="results/sigma"
     script:
         "bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}"

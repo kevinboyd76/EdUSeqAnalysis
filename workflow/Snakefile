@@ -169,7 +169,7 @@ rule make_bigwig:
         bigwig="results/bigwigs/{sample}.bw"
     params:
         bin_size=config["bin_size"],
-        min_mapping_quality=config["min_mapping_quality"],
+        mapping_quality=config["mapping_quality"],
         genome_size=config["effective_genome_size"],
         blacklistFile=config["blacklistFile"]
     envmodules:
@@ -177,7 +177,7 @@ rule make_bigwig:
     log: "results/logs/snakelogs/make_bigwig.{sample}.log"
     shell:
         """
-        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.min_mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
+        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
         """
 
 ##################################################################

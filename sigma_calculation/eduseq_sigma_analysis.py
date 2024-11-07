@@ -16,7 +16,7 @@ MIN_VALUE = 1e-9  # Small constant to avoid log issues
 adjusted_counts_file = sys.argv[1]  # Adjusted sample counts
 bin_counts_file = sys.argv[2]       # Sample bin counts
 totalsheared_file = sys.argv[3]     # Control File (total sheared)
-bin_size = sys.argv[4]              # Bin size in base pairs
+bin_size = int(sys.argv[4])         # Bin size in base pairs
 work_dir = sys.argv[5]              # Working directory for outputs
 manual_max = float(sys.argv[6]) if len(sys.argv) > 6 else None  # Optional manual y-axis maximum
 

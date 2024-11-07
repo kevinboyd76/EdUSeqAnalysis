@@ -16,7 +16,7 @@ MIN_VALUE = 1e-9  # Small constant to avoid log issues
 adjusted_counts_file = sys.argv[1]  # Adjusted sample counts
 bin_counts_file = sys.argv[2]       # Sample bin counts
 totalsheared_file = sys.argv[3]     # Control File (total sheared)
-BIN_SIZE = sys.argv[4]              # Bin size in base pairs
+bin_size = sys.argv[4]              # Bin size in base pairs
 work_dir = sys.argv[5]              # Working directory for outputs
 manual_max = float(sys.argv[6]) if len(sys.argv) > 6 else None  # Optional manual y-axis maximum
 
@@ -83,7 +83,7 @@ merged_data.to_csv(output_file, index=False)
 
 # Write the quality counts to a separate file
 with open(qual_counts_output, 'w') as qc_file:
-    qc_file.write(f"Bin size: {BIN_SIZE}\n")
+    qc_file.write(f"Bin size: {bin_size}\n")
     qc_file.write(f"Total sample hits: {total_sample_reads}\n")
     qc_file.write(f"Total adjusted hits: {total_control_reads}\n")
     qc_file.write(f"Correction factor: {correction_factor}\n")
@@ -147,7 +147,7 @@ merged_data[['smoothed_sigma', 'trimmed_sigma']].to_csv(smoothed_output_file, in
 # Write the final quality counts and details to a separate file
 with open(qual_counts_eu_output, 'w') as qual_file:
     qual_file.write(f"File Name: {output_file}\n")
-    qual_file.write(f"Bin size: {BIN_SIZE}\n")
+    qual_file.write(f"Bin size: {bin_size}\n")
     qual_file.write(f"Background Noise (Low): {background_low}\n")
     qual_file.write(f"Background Noise (High): {background_high}\n")
     qual_file.write(f"Baseline Mean (log2 adjusted): {baseline_mean}\n")

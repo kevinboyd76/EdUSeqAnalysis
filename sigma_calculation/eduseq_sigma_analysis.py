@@ -58,8 +58,8 @@ total_sample_reads = merged_data['bin_count_1'].sum()
 total_control_reads = merged_data['sheared_counts'].sum()
 
 # Step 2: Calculate or manually input the correction factor
-if len(sys.argv) > 5:  # If the user provides a manual correction factor
-    correction_factor = float(sys.argv[5])
+if len(sys.argv) > 6:  # If the user provides a manual correction factor
+    correction_factor = float(sys.argv[6])
 else:
     if total_control_reads > 0:
         correction_factor = total_sample_reads / total_control_reads

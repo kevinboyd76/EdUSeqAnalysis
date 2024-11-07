@@ -192,11 +192,12 @@ rule bin_processing:
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
         adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
+        bin_size=config["bin_size"],
         work_dir="results/sigma"
     log: "results/logs/snakelogs/bin_processing.{sample}.log"
     shell:
         """
-        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.bin_size} {params.work_dir}
         """
 
 ##################################################################
@@ -212,11 +213,12 @@ rule sigma_analysis:
         sigma_output="results/sigma/{sample}_sigma_output.csv",
         select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
     params:
+        bin_size=config["bin_size"],
         work_dir="results/sigma"
     log: "results/logs/snakelogs/sigma_analysis.{sample}.log"
     shell:
         """
-        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}
+        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.bin_size} {params.work_dir}
         """
 
 ##################################################################

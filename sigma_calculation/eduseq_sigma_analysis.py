@@ -9,16 +9,16 @@ import os
 logging.basicConfig(filename='eduseq_sigma_analysis.log', level=logging.INFO)
 
 # Constants
-BIN_SIZE = 10000
 SCALE_FACTOR = 1000  # Scaling factor added to sigma calculation
 MIN_VALUE = 1e-9  # Small constant to avoid log issues
 
 # Input variables from command-line arguments
-adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
-bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
-totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
-work_dir = sys.argv[4]              # Working directory for outputs
-manual_max = float(sys.argv[5]) if len(sys.argv) > 5 else None  # Optional manual y-axis maximum
+adjusted_counts_file = sys.argv[1]  # Adjusted sample counts
+bin_counts_file = sys.argv[2]       # Sample bin counts
+totalsheared_file = sys.argv[3]     # Control File (total sheared)
+BIN_SIZE = sys.argv[4]              # Bin size in base pairs
+work_dir = sys.argv[5]              # Working directory for outputs
+manual_max = float(sys.argv[6]) if len(sys.argv) > 6 else None  # Optional manual y-axis maximum
 
 # Ensure the work directory exists
 os.makedirs(work_dir, exist_ok=True)

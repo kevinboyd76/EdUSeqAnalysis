@@ -193,11 +193,12 @@ rule bin_processing:
         adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
         bin_size=config["bin_size"],
+        mapping_quality=config["mapping_quality"],
         work_dir="results/sigma"
     log: "results/logs/snakelogs/bin_processing.{sample}.log"
     shell:
         """
-        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.bin_size} {params.work_dir}
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.bin_size} {params.mapping_quality} {params.work_dir}
         """
 
 ##################################################################

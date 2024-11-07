@@ -1,13 +1,13 @@
-# bin size for bw and sigma
+# bin size and quality
 bin_size: 10000
-# aligner params
+mapping_quality: 60
+# blacklist used
+blacklistFile: "resources/Blacklist_XY.bed"
+# aligner params for bwa mem2
 bwa_genome: "/Volumes/shared-refs/gatk_resources/hg38/v0/bwa-mem2-index/Homo_sapiens_assembly38.fasta"
-# macs2 params
+# peak calling params for macs2
 effective_genome_size: 2913022398
 macs2_minimum_fdr: 0.05
-# bamCoverage params
-min_mapping_quality: 30
-blacklistFile: "resources/Blacklist_XY.bed"
 # Modules
 bwamem2: "bwa-mem2/2.0"
 fastqc: "fastqc/0.12.1"

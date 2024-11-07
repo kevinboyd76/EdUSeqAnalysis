@@ -48,7 +48,9 @@ create_bedgraph() {
     # Sort the bedGraph file
     sort -k1,1 -k2,2n "$output_file" > "${output_file%.bedGraph}_sorted.bedGraph"
 
-    echo "bedGraph for ${column_name} created: ${output_file}"
+    # Remove the unsorted bedGraph file
+    rm "$output_file"
+
     echo "Sorted bedGraph for ${column_name} created: ${output_file%.bedGraph}_sorted.bedGraph"
 }
 

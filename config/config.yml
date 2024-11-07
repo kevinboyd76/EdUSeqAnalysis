@@ -1,10 +1,11 @@
+# bin size for bw and sigma
+bin_size: 10000
 # aligner params
 bwa_genome: "/Volumes/shared-refs/gatk_resources/hg38/v0/bwa-mem2-index/Homo_sapiens_assembly38.fasta"
 # macs2 params
 effective_genome_size: 2913022398
 macs2_minimum_fdr: 0.05
 # bamCoverage params
-bin_size: 10000
 min_mapping_quality: 30
 blacklistFile: "resources/Blacklist_XY.bed"
 # Modules

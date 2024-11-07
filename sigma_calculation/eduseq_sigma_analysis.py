@@ -39,8 +39,8 @@ try:
     logging.info(f"Loading input files: {adjusted_counts_file}, {bin_counts_file}, {totalsheared_file}")
     
     # Reading space-delimited .txt files
-    adjusted_counts = pd.read_csv(adjusted_counts_file, delim_whitespace=True, names=["chromosome", "bin", "adjusted_1", "adjusted_2"])
-    bin_counts = pd.read_csv(bin_counts_file, delim_whitespace=True, names=["chromosome", "bin", "bin_count_1", "bin_count_2"])
+    adjusted_counts = pd.read_csv(adjusted_counts_file, sep='\s+', names=["chromosome", "bin", "adjusted_1", "adjusted_2"])
+    bin_counts = pd.read_csv(bin_counts_file, sep='\s+', names=["chromosome", "bin", "bin_count_1", "bin_count_2"])
     
     # Reading CSV file (TotalSheared data)
     totalsheared = pd.read_csv(totalsheared_file, names=["chromosome", "bin", "sheared_counts"])

@@ -234,5 +234,6 @@ rule create_bedgraphs:
     params:
         bin_size=config["bin_size"],
         work_dir="results/sigma"
-    script:
+    log: "results/logs/snakelogs/create_bedgraphs.{sample}.log"
+    shell:
         "bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}"

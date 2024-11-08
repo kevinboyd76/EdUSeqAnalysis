@@ -28,8 +28,8 @@ mkdir -p "$OUTPUT_DIR"
 create_bedgraph() {
     local column=$1
     local column_name=$2
-    # Extract the base sample name by removing everything after the first underscore
-    local sample_name=$(basename "${INPUT_CSV%.csv}" | cut -d'_' -f1)
+    # Extract the base sample name by removing only the "_sigma_select_EU_0b" suffix
+    local sample_name=$(basename "${INPUT_CSV%.csv}" | sed 's/_sigma_select_EU_0b$//')
     local output_file="${OUTPUT_DIR}/${sample_name}_${column_name}.bedGraph"
 
     # Skip the header and process the CSV

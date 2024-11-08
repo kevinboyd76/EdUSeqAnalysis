@@ -28,7 +28,9 @@ mkdir -p "$OUTPUT_DIR"
 create_bedgraph() {
     local column=$1
     local column_name=$2
-    local output_file="${OUTPUT_DIR}/$(basename "${INPUT_CSV%.csv}")_${column_name}.bedGraph"
+    # Extract the base sample name by removing everything after the first underscore
+    local sample_name=$(basename "${INPUT_CSV%.csv}" | cut -d'_' -f1)
+    local output_file="${OUTPUT_DIR}/${sample_name}_${column_name}.bedGraph"
 
     # Skip the header and process the CSV
     awk -v bin_size="$BIN_SIZE" -v col="$column" -F, 'NR > 1 {

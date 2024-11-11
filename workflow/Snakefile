@@ -65,7 +65,8 @@ rule all:
         expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
         expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index)
+        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
+        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples.index)
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##
@@ -96,18 +97,23 @@ rule align_reads_with_bwamem:
         R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
     params:
-        genome=config["bwa_genome"]
+        genome=config["bwa_genome"],
+        blacklist=config["blacklistFile"]
     output:
         bam="results/aligned/{sample}.bam",
         bai="results/aligned/{sample}.bam.bai"
     envmodules:
         config["bwamem2"],
-        config["samtools"]
+        config["samtools"],
+        config["bedtools"]
     log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | samtools sort -@ 12 > {output.bam}
-        samtools index -@ 12 {output.bam} > {output.bai}
+        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} |        # Align to genome
+        samtools view -b - |                                                 # Convert to BAM format immediately
+        bedtools intersect -v -abam - -b {params.blacklist} |                # Exclude blacklist regions
+        samtools sort -@ 12 -o {output.bam}                                  # Sort the output
+        samtools index -@ 12 {output.bam}                                    # Index the blacklisted BAM
         """
 
 ##################################################################
@@ -163,7 +169,7 @@ rule make_bigwig:
         bigwig="results/bigwigs/{sample}.bw"
     params:
         bin_size=config["bin_size"],
-        min_mapping_quality=config["min_mapping_quality"],
+        mapping_quality=config["mapping_quality"],
         genome_size=config["effective_genome_size"],
         blacklistFile=config["blacklistFile"]
     envmodules:
@@ -171,7 +177,7 @@ rule make_bigwig:
     log: "results/logs/snakelogs/make_bigwig.{sample}.log"
     shell:
         """
-        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.min_mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
+        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
         """
 
 ##################################################################
@@ -186,11 +192,13 @@ rule bin_processing:
         sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
         adjust_csv="results/sigma/{sample}_adjust.csv"
     params:
+        bin_size=config["bin_size"],
+        mapping_quality=config["mapping_quality"],
         work_dir="results/sigma"
     log: "results/logs/snakelogs/bin_processing.{sample}.log"
     shell:
         """
-        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.work_dir}
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.bin_size} {params.mapping_quality} {params.work_dir}
         """
 
 ##################################################################
@@ -206,9 +214,26 @@ rule sigma_analysis:
         sigma_output="results/sigma/{sample}_sigma_output.csv",
         select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
     params:
+        bin_size=config["bin_size"],
         work_dir="results/sigma"
     log: "results/logs/snakelogs/sigma_analysis.{sample}.log"
     shell:
         """
-        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.work_dir}
+        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.bin_size} {params.work_dir}
         """
+
+##################################################################
+##                        Create BedGraphs                      ##
+##################################################################
+
+rule create_bedgraphs:
+    input:
+        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
+    output:
+        sigma_mb="results/sigma/{sample}_sigma_mb_sorted.bedGraph"
+    params:
+        bin_size=config["bin_size"],
+        work_dir="results/sigma"
+    log: "results/logs/snakelogs/create_bedgraphs.{sample}.log"
+    shell:
+        "bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}"

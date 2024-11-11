@@ -1,14 +1,36 @@
 #!/bin/bash
+#SBATCH --job-name=sigma_bedgraphs
+#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
 
-# Set variables
-BIN_SIZE=10000
-INPUT_CSV="MTBP6Tir114_EdU_HU_Aph_set1_sigma_select_EU_0b.csv"
+# Check if the correct number of arguments are provided
+if [[ $# -lt 3 ]]; then
+    echo "Usage: sbatch create_bedgraphs.sh <input_csv> <bin_size> <output_dir>"
+    exit 1
+fi
+
+# Set variables from positional arguments
+INPUT_CSV=$1         # The input CSV file
+BIN_SIZE=$2          # Bin size in base pairs
+OUTPUT_DIR=$3        # Output directory
+
+# Validate that the input CSV file exists
+if [[ ! -f "$INPUT_CSV" ]]; then
+    echo "Error: Input CSV file does not exist."
+    exit 1
+fi
+
+# Create the output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
 
 # Function to create a bedGraph for a specific column
 create_bedgraph() {
     local column=$1
     local column_name=$2
-    local output_file="MTBP6Tir114_EdU_HU_Aph_set1_${column_name}.bedGraph"
+    # Extract the base sample name by removing only the "_sigma_select_EU_0b" suffix
+    local sample_name=$(basename "${INPUT_CSV%.csv}" | sed 's/_sigma_select_EU_0b$//')
+    local output_file="${OUTPUT_DIR}/${sample_name}_${column_name}.bedGraph"
 
     # Skip the header and process the CSV
     awk -v bin_size="$BIN_SIZE" -v col="$column" -F, 'NR > 1 {
@@ -28,7 +50,9 @@ create_bedgraph() {
     # Sort the bedGraph file
     sort -k1,1 -k2,2n "$output_file" > "${output_file%.bedGraph}_sorted.bedGraph"
 
-    echo "bedGraph for ${column_name} created: ${output_file}"
+    # Remove the unsorted bedGraph file
+    rm "$output_file"
+
     echo "Sorted bedGraph for ${column_name} created: ${output_file%.bedGraph}_sorted.bedGraph"
 }
 
@@ -37,6 +61,6 @@ create_bedgraph 8 "sigma"               # Column 8 is "sigma"
 create_bedgraph 9 "sigma_mb"            # Column 9 is "sigma_mb"
 create_bedgraph 10 "smoothed_sigma"     # Column 10 is "smoothed_sigma"
 create_bedgraph 11 "trimmed_sigma"      # Column 11 is "trimmed_sigma"
-create_bedgraph 12 "sigma_log2"         # Column 12 is "sigma_log2"
+#create_bedgraph 12 "sigma_log2"         # Column 12 is "sigma_log2"
 
 echo "All bedGraphs created successfully."

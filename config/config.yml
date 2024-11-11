@@ -1,12 +1,12 @@
-# aligner params
+# bin size (10000) and mapping quality (30 / 60)
+bin_size: 10000
+mapping_quality: 60
+# blacklist file used
+blacklistFile: "resources/Blacklist_XY.bed"
+# params for hg38 genome assembly
 bwa_genome: "/Volumes/shared-refs/gatk_resources/hg38/v0/bwa-mem2-index/Homo_sapiens_assembly38.fasta"
-# macs2 params
 effective_genome_size: 2913022398
 macs2_minimum_fdr: 0.05
-# bamCoverage params
-bin_size: 10000
-min_mapping_quality: 30
-blacklistFile: "/s/cobre-dev-bio/boydk/Sansam_Lab/EdUSeqAnalysis_HCT_Biotin/resources/ENCFF356LFX.bed"
 # Modules
 bwamem2: "bwa-mem2/2.0"
 fastqc: "fastqc/0.12.1"
@@ -15,3 +15,4 @@ samtools: "samtools/1.18"
 macs2: "macs2/2.2.7.1"
 deeptools: "deeptools/3.4.3"
 Bioconductor: "bioconductor/3.14"
+bedtools: "bedtools/2.30.0"

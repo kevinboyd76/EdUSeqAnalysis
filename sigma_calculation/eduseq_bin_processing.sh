@@ -10,14 +10,14 @@ module load bedtools
 module load deeptools
 
 # Define variables passed from Snakemake
-BIN_SIZE=10000  # Bin size in base pairs
-QUALITY=60      # Minimum mapping quality
 CHROM_SIZES="/hpc-prj/cobre-dev-bio/boydk/reference_info/hg38/hg38.chrom.sizes"  # Update this to the actual location
 
 # Input SAM files
 ADJUST_SAM=$1  # Total sheared DNA SAM file
 SAMPLE_SAM=$2  # Edu-labeled SAM file
-WORK_DIR=$3    # Working directory passed from Snakemake
+BIN_SIZE=$3    # Bin size in base pairs
+QUALITY=$4     # Minimum mapping quality
+WORK_DIR=$5    # Working directory passed from Snakemake
 
 # Check if the input files are provided
 if [[ $# -lt 3 ]]; then
@@ -143,4 +143,4 @@ echo "Step 7 complete. bedGraph created from adjusted counts."
 #fi
 
 # Final message
-echo "EduSeq analysis pipeline complete."
+echo "Bin Processing Complete."

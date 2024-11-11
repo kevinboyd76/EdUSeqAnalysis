@@ -9,16 +9,16 @@ import os
 logging.basicConfig(filename='eduseq_sigma_analysis.log', level=logging.INFO)
 
 # Constants
-BIN_SIZE = 10000
 SCALE_FACTOR = 1000  # Scaling factor added to sigma calculation
 MIN_VALUE = 1e-9  # Small constant to avoid log issues
 
 # Input variables from command-line arguments
-adjusted_counts_file = sys.argv[1]  # EduHU_HCT_Biotin_set2A_adjusted_sample_counts.txt
-bin_counts_file = sys.argv[2]       # EduHU_HCT_Biotin_set2A_sample_bin_counts.txt
-totalsheared_file = sys.argv[3]     # EduHU_HCT_TotalSheared_set2A_adjust.csv
-work_dir = sys.argv[4]              # Working directory for outputs
-manual_max = float(sys.argv[5]) if len(sys.argv) > 5 else None  # Optional manual y-axis maximum
+adjusted_counts_file = sys.argv[1]  # Adjusted sample counts
+bin_counts_file = sys.argv[2]       # Sample bin counts
+totalsheared_file = sys.argv[3]     # Control File (total sheared)
+bin_size = int(sys.argv[4])         # Bin size in base pairs
+work_dir = sys.argv[5]              # Working directory for outputs
+manual_max = float(sys.argv[6]) if len(sys.argv) > 6 else None  # Optional manual y-axis maximum
 
 # Ensure the work directory exists
 os.makedirs(work_dir, exist_ok=True)
@@ -39,8 +39,8 @@ try:
     logging.info(f"Loading input files: {adjusted_counts_file}, {bin_counts_file}, {totalsheared_file}")
     
     # Reading space-delimited .txt files
-    adjusted_counts = pd.read_csv(adjusted_counts_file, delim_whitespace=True, names=["chromosome", "bin", "adjusted_1", "adjusted_2"])
-    bin_counts = pd.read_csv(bin_counts_file, delim_whitespace=True, names=["chromosome", "bin", "bin_count_1", "bin_count_2"])
+    adjusted_counts = pd.read_csv(adjusted_counts_file, sep='\s+', names=["chromosome", "bin", "adjusted_1", "adjusted_2"])
+    bin_counts = pd.read_csv(bin_counts_file, sep='\s+', names=["chromosome", "bin", "bin_count_1", "bin_count_2"])
     
     # Reading CSV file (TotalSheared data)
     totalsheared = pd.read_csv(totalsheared_file, names=["chromosome", "bin", "sheared_counts"])
@@ -58,8 +58,8 @@ total_sample_reads = merged_data['bin_count_1'].sum()
 total_control_reads = merged_data['sheared_counts'].sum()
 
 # Step 2: Calculate or manually input the correction factor
-if len(sys.argv) > 5:  # If the user provides a manual correction factor
-    correction_factor = float(sys.argv[5])
+if len(sys.argv) > 6:  # If the user provides a manual correction factor
+    correction_factor = float(sys.argv[6])
 else:
     if total_control_reads > 0:
         correction_factor = total_sample_reads / total_control_reads
@@ -73,10 +73,9 @@ logging.info(f"Correction factor calculated: {correction_factor}")
 merged_data['sigma'] = 0
 
 # Step 3: Calculate sigma values, applying the correction factor
-for index, row in merged_data.iterrows():
-    if row['sheared_counts'] > 0:  # Avoid division by zero
-        sigma = (row['bin_count_1'] / row['sheared_counts']) * SCALE_FACTOR * correction_factor
-        merged_data.at[index, 'sigma'] = sigma
+merged_data['sigma'] = merged_data.apply(
+    lambda row: (row['bin_count_1'] / row['sheared_counts']) * SCALE_FACTOR * correction_factor
+    if row['sheared_counts'] > 0 else 0, axis=1)
 
 # Save the sigma output to a new CSV file
 logging.info(f"Saving sigma calculations to {output_file}")
@@ -84,7 +83,7 @@ merged_data.to_csv(output_file, index=False)
 
 # Write the quality counts to a separate file
 with open(qual_counts_output, 'w') as qc_file:
-    qc_file.write(f"Bin size: {BIN_SIZE}\n")
+    qc_file.write(f"Bin size: {bin_size}\n")
     qc_file.write(f"Total sample hits: {total_sample_reads}\n")
     qc_file.write(f"Total adjusted hits: {total_control_reads}\n")
     qc_file.write(f"Correction factor: {correction_factor}\n")
@@ -148,7 +147,7 @@ merged_data[['smoothed_sigma', 'trimmed_sigma']].to_csv(smoothed_output_file, in
 # Write the final quality counts and details to a separate file
 with open(qual_counts_eu_output, 'w') as qual_file:
     qual_file.write(f"File Name: {output_file}\n")
-    qual_file.write(f"Bin size: {BIN_SIZE}\n")
+    qual_file.write(f"Bin size: {bin_size}\n")
     qual_file.write(f"Background Noise (Low): {background_low}\n")
     qual_file.write(f"Background Noise (High): {background_high}\n")
     qual_file.write(f"Baseline Mean (log2 adjusted): {baseline_mean}\n")

@@ -1,36 +1,36 @@
 # EdUSeqAnalysis
 ![EdU](/images/EdU.png)
 
-# Project Description
+# 1) Project Description
 EdUSeqAnalysis Pipeline is a Snakemake pipeline designed to analyze whole-genome sequencing data from Edu-labeled DNA samples. This pipeline generates trimmed FASTQ files, genome alignments (hg38), coverage files, and background-adjusted sigma values, providing a robust framework for analyzing Edu-DNA incorporation. The sigma values were calculated, trimmed, and smoothed based on methologies adapted from Macheret and Halazonetis (Nature, 2018). Each processing step is clearly defined, with dependencies managed through Snakemake, and execution automated via module environments.
 
 The pipeline utilizes a control sample to normalize EdU-DNA counts, producing files compatible with genome visualization and quantitative analysis of DNA replication and synthesis. To facilitate quick testing, we include a compact dataset within the repository. Additionally, a detailed example is provided to demonstrate how to run this pipeline. This workflow is inspired by and extends the protocols provided by the Sansam Lab and Macheret and Halazonetis, particularly through modifications in genome alignment, sigma calculation, background subtraction, and smoothing techniques aligned to the hg38 genome assembly.
 
 
-# Instructions to Run Pipeline on Slurm Managed HPC
-## 1. Clone repository
+# 2) Instructions to Run Pipeline on Slurm Managed HPC
+## A. Clone repository
 ```
 git clone https://github.com/SansamLab/EdUSeqAnalysis.git
 ```
-## 2. Load modules
+## B. Load modules
 ```
 module purge
 module load slurm python/3.10 pandas/2.2.3 numpy/1.22.3 matplotlib/3.7.1
 ```
-## 3. Modify Samples file
+## C. Modify Samples file
 ```
 vim samples.csv
 ```
-## 4. Dry Run
+## D. Dry Run
 ```
 snakemake -npr
 ```
-## 5. Run on HPC with config.yml options
+## E. Run on HPC with config.yml options
 ```
 sbatch --wrap="snakemake -j 999 --use-envmodules --latency-wait 30 --cluster-config config/cluster_config.yml --cluster 'sbatch -A {cluster.account} -p {cluster.partition} --cpus-per-task {cluster.cpus-per-task}  -t {cluster.time} --mem {cluster.mem} --output {cluster.output}'"
 ```
 
-# Explanation of samples.csv
+# 3) Explanation of samples.csv
 Note. Make sure to check sample.csv before each run
 
 The samples.csv file in the config folder has paths to the test fastq files. You must replace those paths with those for your own fastq files. The first column of each row is the sample name. This name will be used for all output files. Columns 2 and 3 are the paths to the paired fastq files. Column 4 is the sample type (either "treatment" or "control"). Column 5 is the name of the corresponding Control sample for each treated sample (use "NA" if the sample is a control).
@@ -42,7 +42,7 @@ The samples.csv file in the config folder has paths to the test fastq files. You
 | testInput   | input_R1.fastq.gz   | input_R2.fastq.gz   | control    | NA        |
 
 
-# Explanation of Final Output
+# 4) Explanation of Final Output
 {sample}_sigma_select_EU_0b.csv
 - Columns: chromosome, bin, adjusted_1, adjusted_2, bin_count_1, bin_count_2, sheared_counts, sigma, sigma_mb, smoothed_sigma, trimmed_sigma, sigma_log2
     +	Chromosome: The chromosome identifier for each bin, aligned to hg38
@@ -57,6 +57,6 @@ The samples.csv file in the config folder has paths to the test fastq files. You
     +	Sigma_log2: The final sigma value transformed to the log2 scale for better visualization and comparison. Very negative values indicate bins with low or near-zero adjusted sigma values.
 
 
-# Citations
+# 5) Citations
 Macheret, M., & Halazonetis, T. D. (2018). Intragenic origins due to short G1 phases underlie oncogene-induced DNA replication stress. Nature, 555(7694), 112–116. https://doi.org/10.1038/nature25507
 

@@ -8,24 +8,24 @@ The pipeline utilizes a control sample to normalize EdU-DNA counts, producing fi
 
 
 # 2) Instructions to Run Pipeline on Slurm Managed HPC
-## A. Clone repository
+## 2A. Clone repository
 ```
 git clone https://github.com/SansamLab/EdUSeqAnalysis.git
 ```
-## B. Load modules
+## 2B. Load modules
 ```
 module purge
 module load slurm python/3.10 pandas/2.2.3 numpy/1.22.3 matplotlib/3.7.1
 ```
-## C. Modify Samples file
+## 2C. Modify Samples file
 ```
 vim samples.csv
 ```
-## D. Dry Run
+## 2D. Dry Run
 ```
 snakemake -npr
 ```
-## E. Run on HPC with config.yml options
+## 2E. Run on HPC with config.yml options
 ```
 sbatch --wrap="snakemake -j 999 --use-envmodules --latency-wait 30 --cluster-config config/cluster_config.yml --cluster 'sbatch -A {cluster.account} -p {cluster.partition} --cpus-per-task {cluster.cpus-per-task}  -t {cluster.time} --mem {cluster.mem} --output {cluster.output}'"
 ```
@@ -38,8 +38,7 @@ The samples.csv file in the config folder has paths to the test fastq files. You
 | sample      | fastq1              | fastq2              | sampleType | Control   |
 |-------------|---------------------|---------------------|------------|-----------|
 | testSample  | sample_R1.fastq.gz  | sample_R2.fastq.gz  | treatment  | testInput |
-| testSample2 | sample2_R1.fastq.gz | sample2_R2.fastq.gz | treatment  | testInput |
-| testInput   | input_R1.fastq.gz   | input_R2.fastq.gz   | control    | NA        |
+| testInput   | sample2_R1.fastq.gz | sample2_R2.fastq.gz | control    | NA        |
 
 
 # 4) Explanation of Final Output

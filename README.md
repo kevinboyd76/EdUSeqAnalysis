@@ -6,6 +6,7 @@ EdUSeqAnalysis Pipeline is a Snakemake pipeline designed to analyze whole-genome
 The pipeline utilizes a control sample to normalize EdU-DNA counts, producing files compatible with genome visualization and quantitative analysis of DNA replication and synthesis. To facilitate quick testing, we include a compact dataset within the repository. Additionally, a detailed example is provided to demonstrate how to run this pipeline. This workflow is inspired by and extends the protocols provided by the Sansam Lab and Macheret and Halazonetis, particularly through modifications in genome alignment, sigma calculation, background subtraction, and smoothing techniques for hg38 data.
 
 
+# Instructions to Run Pipeline
 ## 1. Clone repository
 ```
 git clone https://github.com/SansamLab/EdUSeqAnalysis.git
@@ -41,4 +42,8 @@ sbatch --wrap="snakemake -j 999 --use-envmodules --latency-wait 30 --cluster-con
     +	Smoothed_sigma: The sigma value after percentile-based smoothing, where outliers and background noise are reduced based on selected percentiles. This percentile-based approach yields a stable and consistent signal.
     +	Trimmed_sigma: Post-smoothing, a trimming step is applied to further reduce extreme outliers, using a trim factor to cap extreme deviations.
     +	Sigma_log2: The final sigma value transformed to the log2 scale for better visualization and comparison. Very negative values indicate bins with low or near-zero adjusted sigma values.
+
+
+# Citations
+Macheret, M., & Halazonetis, T. D. (2018). Intragenic origins due to short G1 phases underlie oncogene-induced DNA replication stress. Nature, 555(7694), 112–116. https://doi.org/10.1038/nature25507
 

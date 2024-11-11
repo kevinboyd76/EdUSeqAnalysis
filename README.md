@@ -1,5 +1,8 @@
 # EdUSeqAnalysis
- 
+
+# Project Description
+This EdU Seq Pipeline processes short whole-genome sequencing reads
+
 ## 1. Clone repository
 ```
 git clone https://github.com/SansamLab/EdUSeqAnalysis.git

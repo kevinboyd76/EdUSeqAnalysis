@@ -1,9 +1,10 @@
 # EdUSeqAnalysis
+![EdU](/images/EdU.png)
 
 # Project Description
 EdUSeqAnalysis Pipeline is a Snakemake pipeline designed to analyze whole-genome sequencing data from Edu-labeled DNA samples. This pipeline generates trimmed FASTQ files, genome alignments (hg38), coverage files, and background-adjusted sigma values, providing a robust framework for analyzing Edu-DNA incorporation. The sigma values were calculated, trimmed, and smoothed based on methologies adapted from Macheret and Halazonetis (Nature, 2018). Each processing step is clearly defined, with dependencies managed through Snakemake, and execution automated via module environments.
 
-The pipeline utilizes a control sample to normalize EdU-DNA counts, producing files compatible with genome visualization and quantitative analysis of DNA replication and synthesis. To facilitate quick testing, we include a compact dataset within the repository. Additionally, a detailed example is provided to demonstrate how to run this pipeline. This workflow is inspired by and extends the protocols provided by the Sansam Lab and Macheret and Halazonetis, particularly through modifications in genome alignment, sigma calculation, background subtraction, and smoothing techniques for hg38 data.
+The pipeline utilizes a control sample to normalize EdU-DNA counts, producing files compatible with genome visualization and quantitative analysis of DNA replication and synthesis. To facilitate quick testing, we include a compact dataset within the repository. Additionally, a detailed example is provided to demonstrate how to run this pipeline. This workflow is inspired by and extends the protocols provided by the Sansam Lab and Macheret and Halazonetis, particularly through modifications in genome alignment, sigma calculation, background subtraction, and smoothing techniques aligned to the hg38 genome assembly.
 
 
 # Instructions to Run Pipeline

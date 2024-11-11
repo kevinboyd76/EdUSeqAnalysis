@@ -30,6 +30,18 @@ snakemake -npr
 sbatch --wrap="snakemake -j 999 --use-envmodules --latency-wait 30 --cluster-config config/cluster_config.yml --cluster 'sbatch -A {cluster.account} -p {cluster.partition} --cpus-per-task {cluster.cpus-per-task}  -t {cluster.time} --mem {cluster.mem} --output {cluster.output}'"
 ```
 
+# Explanation of samples.csv
+Note. Make sure to check sample.csv before each run
+
+The samples.csv file in the config folder has paths to the test fastq files. You must replace those paths with those for your own fastq files. The first column of each row is the sample name. This name will be used for all output files. Columns 2 and 3 are the paths to the paired fastq files. Column 4 is the sample type (either "treatment" or "control"). Column 5 is the name of the corresponding Control sample for each treated sample (use "NA" if the sample is a control).
+
+| sample      | fastq1              | fastq2              | sampleType | Control   |
+|-------------|---------------------|---------------------|------------|-----------|
+| testSample  | sample_R1.fastq.gz  | sample_R2.fastq.gz  | treatment  | testInput |
+| testSample2 | sample2_R1.fastq.gz | sample2_R2.fastq.gz | treatment  | testInput |
+| testInput   | input_R1.fastq.gz   | input_R2.fastq.gz   | control    | NA        |
+
+
 # Explanation of Final Output
 {sample}_sigma_select_EU_0b.csv
 - Columns: chromosome, bin, adjusted_1, adjusted_2, bin_count_1, bin_count_2, sheared_counts, sigma, sigma_mb, smoothed_sigma, trimmed_sigma, sigma_log2

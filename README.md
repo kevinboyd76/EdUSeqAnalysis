@@ -7,7 +7,7 @@ EdUSeqAnalysis Pipeline is a Snakemake pipeline designed to analyze whole-genome
 The pipeline utilizes a control sample to normalize EdU-DNA counts, producing files compatible with genome visualization and quantitative analysis of DNA replication and synthesis. To facilitate quick testing, we include a compact dataset within the repository. Additionally, a detailed example is provided to demonstrate how to run this pipeline. This workflow is inspired by and extends the protocols provided by the Sansam Lab and Macheret and Halazonetis, particularly through modifications in genome alignment, sigma calculation, background subtraction, and smoothing techniques aligned to the hg38 genome assembly.
 
 
-# Instructions to Run Pipeline
+# Instructions to Run Pipeline on Slurm Managed HPC
 ## 1. Clone repository
 ```
 git clone https://github.com/SansamLab/EdUSeqAnalysis.git

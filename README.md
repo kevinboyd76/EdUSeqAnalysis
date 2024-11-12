@@ -1,5 +1,5 @@
 # EdUSeqAnalysis
-![EdU](/images/EdU.png)
+![EdU](/images/EdUseq.png)
 
 # 1) Project Description
 EdUSeqAnalysis Pipeline is a Snakemake pipeline designed to analyze whole-genome sequencing data from Edu-labeled DNA samples. This pipeline generates trimmed FASTQ files, genome alignments (hg38), coverage files, and background-adjusted sigma values, providing a robust framework for analyzing Edu-DNA incorporation. The sigma values were calculated, trimmed, and smoothed based on methologies adapted from Macheret and Halazonetis (Nature, 2018). Each processing step is clearly defined, with dependencies managed through Snakemake, and execution automated via module environments.

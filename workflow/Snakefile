@@ -56,17 +56,37 @@ adjust_samples = samples_table[samples_table['sampleType'] == 'control']
 
 rule all:
     input:
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
-        expand("results/aligned/{sample}.bam", sample = samples_table.index),
-        expand("results/aligned/{sample}.sam", sample = samples_table.index),
-        expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
-        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
-        expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples.index)
+        expand("results/merged/{sample}_R1.fastq.gz", sample=set(samples_table["Merged"])),
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=set(samples_table["Merged"])),
+        expand("results/aligned/{sample}.bam", sample=set(samples_table["Merged"])),
+        expand("results/aligned/{sample}.sam", sample=set(samples_table["Merged"])),
+        expand("results/aligned/{sample}_flagstat.txt", sample=set(samples_table["Merged"])),
+        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=set(samples_table["Merged"])),
+        expand("results/bigwigs/{sample}.bw", sample=set(samples_table["Merged"])),
+        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=set(samples_table["Merged"])),
+        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=set(samples_table["Merged"])),
+        expand("results/sigma/{sample}_sigma_output.csv", sample=set(samples_table["Merged"])),
+        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=set(samples_table["Merged"])),
+        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=set(samples_table["Merged"]))
+
+##################################################################
+##                        merge_fastqs                          ##
+##################################################################
+
+rule merge_fastq:
+    input:
+        fq1=lambda wildcards: samples_table[samples_table["Merged"] == wildcards.sample]["fastq1"].tolist(),
+        fq2=lambda wildcards: samples_table[samples_table["Merged"] == wildcards.sample]["fastq2"].tolist()
+    output:
+        merged_fq1="results/merged/{sample}_R1.fastq.gz",
+        merged_fq2="results/merged/{sample}_R2.fastq.gz"
+    log:
+        "results/logs/snakelogs/merge_fastq.{sample}.log"
+    shell:
+        """
+        zcat {input.fq1} | gzip > {output.merged_fq1}
+        zcat {input.fq2} | gzip > {output.merged_fq2}
+        """
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##
@@ -74,7 +94,8 @@ rule all:
 
 rule trim_reads_with_fastp:
     input:
-        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+        fq1="results/merged/{sample}_R1.fastq.gz",
+        fq2="results/merged/{sample}_R2.fastq.gz"
     output:
         trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",

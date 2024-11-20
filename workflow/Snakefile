@@ -36,18 +36,19 @@ def sample_type_dict_from_sample(wildcards):
 
 # Define the sample-control matching from samples.csv for sigma calculation
 def matched_files_from_sample(wildcards):
-  return {
-    "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
-    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
-  }
+    matched_row = samples_table[samples_table["Merged"] == wildcards.sample].iloc[0]
+    return {
+        "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
+        "adjust_sam": f"results/aligned/{matched_row['Control']}.sam" if matched_row['Control'] != 'NA' else None
+    }
 
 # Define the sample-adjust file matching from samples.csv for sigma post processing
 def matched_files_for_sigma(wildcards):
-  return {
-    "adjusted_sample_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjusted_sample_counts.txt',
-    "sample_bin_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_sample_bin_counts.txt',
-    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjust.csv'
-  }
+    return {
+        "adjusted_sample_counts": f"results/sigma/{wildcards.sample}_adjusted_sample_counts.txt",
+        "sample_bin_counts": f"results/sigma/{wildcards.sample}_sample_bin_counts.txt",
+        "adjust_csv": f"results/sigma/{wildcards.sample}_adjust.csv"
+    }
 
 # Create a filtered subset of samples (e.g., only treatment samples)
 treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']

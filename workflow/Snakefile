@@ -26,10 +26,13 @@ samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
 
 # sample_type input function definition set to Python dictionary
 def sample_type_dict_from_sample(wildcards):
-  return {
-    "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
-    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.bam'
-  }
+    # Find the first row where Merged matches wildcards.sample
+    matched_row = samples_table[samples_table["Merged"] == wildcards.sample].iloc[0]
+    return {
+        "treatment": f"results/aligned/{wildcards.sample}.bam",
+        "control": f"results/aligned/{matched_row['Control']}.bam" if matched_row['Control'] != 'NA' else None
+    }
+
 
 # Define the sample-control matching from samples.csv for sigma calculation
 def matched_files_from_sample(wildcards):

@@ -67,14 +67,14 @@ rule merge_fastqs:
             row["fastq2"] for _, row in samples_table[samples_table["Merged"] == wildcards.sample].iterrows()
         ]
     output:
-        fq1="results/merged/{sample}_R1.fastq.gz",
-        fq2="results/merged/{sample}_R2.fastq.gz"
+        merged_fq1="results/merged/{sample}_R1.fastq.gz",
+        merged_fq2="results/merged/{sample}_R2.fastq.gz"
     log:
         "results/logs/snakelogs/merge_fastqs.{sample}.log"
     shell:
         """
-        cat {input.fq1} > {output.fq1}
-        cat {input.fq2} > {output.fq2}
+        zcat {input.fq1} | gzip > {output.merged_fq1}
+        zcat {input.fq2} | gzip > {output.merged_fq2}
         """
 
 ##################################################################

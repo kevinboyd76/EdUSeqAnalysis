@@ -1,45 +1,58 @@
 configfile: "config/config.yml"
 
+##################################################################
+##                    Define input functions                    ##
+##################################################################
+
 import pandas as pd
 
-# Read unified table
+# Read the samples.csv file
 samples_table = pd.read_csv("config/samples.csv")
 
-# Validate data
-assert samples_table["sample"].notna().all(), "Missing sample values."
-assert samples_table["Merged"].notna().all(), "Missing merged values."
+# Validate the CSV file
+assert samples_table["sample"].notna().all(), "Missing values in 'sample' column."
+assert samples_table["Merged"].notna().all(), "Missing values in 'Merged' column."
 
 # Combine all valid sample and merged group names
 all_samples = list(samples_table["sample"]) + list(samples_table["Merged"].unique())
 all_samples = list(set(all_samples))  # Remove duplicates
 
-# Filter for treatment and control samples
+# Separate treatment and control samples based on the sampleType column
 treatment_samples = samples_table[samples_table["sampleType"] == "treatment"]["sample"].tolist()
 control_samples = samples_table[samples_table["sampleType"] == "control"]["sample"].tolist()
 
-# Input function
+# Define an input function to dynamically handle individual and merged samples
 def fq_dict_from_sample(wildcards):
     if wildcards.sample in samples_table["sample"].values:
+        # Handle individual samples
         row = samples_table[samples_table["sample"] == wildcards.sample].iloc[0]
         return {"fq1": row["fastq1"], "fq2": row["fastq2"]}
     elif wildcards.sample in samples_table["Merged"].values:
+        # Handle merged groups
         rows = samples_table[samples_table["Merged"] == wildcards.sample]
         return {
             "fq1": [row["fastq1"] for _, row in rows.iterrows()],
             "fq2": [row["fastq2"] for _, row in rows.iterrows()]
         }
     else:
-        raise ValueError(f"Sample {wildcards.sample} not found.")
+        raise ValueError(f"Sample {wildcards.sample} not found in the samples table.")
+
+##################################################################
+##                          Rule All                            ##
+##################################################################
 
 rule all:
     input:
+        # Trimming results for all samples
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=all_samples),
+        # Aligned BAM files for all samples
         expand("results/aligned/{sample}.bam", sample=all_samples),
+        # SAM files and flagstat outputs
         expand("results/aligned/{sample}.sam", sample=all_samples),
         expand("results/aligned/{sample}_flagstat.txt", sample=all_samples)
 
 ##################################################################
-##                    trim_reads_with_fastp                     ##
+##                    Rule: Trim Reads with fastp               ##
 ##################################################################
 
 rule trim_reads_with_fastp:
@@ -48,31 +61,20 @@ rule trim_reads_with_fastp:
     output:
         trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",
+        fastp_report="results/qc/fastp_reports/{sample}.html",
+        fastp_json="results/qc/fastp_reports/{sample}.json"
+    envmodules:
+        config["fastp"]
+    log:
+        "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
     shell:
         """
-        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2}
+        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} \
+              -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
         """
 
 ##################################################################
-##                          merge_fastqs                        ##
-##################################################################
-
-rule merge_fastq:
-    input:
-        lambda wildcards: [samples_table.loc[sample, 'fastq1'] for sample in merged_samples_table.loc[wildcards.merged_sample, 'samples']],
-        lambda wildcards: [samples_table.loc[sample, 'fastq2'] for sample in merged_samples_table.loc[wildcards.merged_sample, 'samples']]
-    output:
-        merged_fastq1="results/merged/{merged_sample}_R1.fastq.gz",
-        merged_fastq2="results/merged/{merged_sample}_R2.fastq.gz"
-    log: "results/logs/snakelogs/merge_fastq.{merged_sample}.log"
-    shell:
-        """
-        cat {input[0]} > {output.merged_fastq1}
-        cat {input[1]} > {output.merged_fastq2}
-        """
-
-##################################################################
-##                   align_reads_with_bwamem                    ##
+##                    Rule: Align Reads with BWA-MEM            ##
 ##################################################################
 
 rule align_reads_with_bwamem:
@@ -89,18 +91,19 @@ rule align_reads_with_bwamem:
         config["bwamem2"],
         config["samtools"],
         config["bedtools"]
-    log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
+    log:
+        "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
     shell:
         """
-        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} |        # Align to genome
-        samtools view -b - |                                                 # Convert to BAM format immediately
-        bedtools intersect -v -abam - -b {params.blacklist} |                # Exclude blacklist regions
-        samtools sort -@ 12 -o {output.bam}                                  # Sort the output
-        samtools index -@ 12 {output.bam}                                    # Index the blacklisted BAM
+        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | \
+        samtools view -b - | \
+        bedtools intersect -v -abam - -b {params.blacklist} | \
+        samtools sort -@ 12 -o {output.bam} && \
+        samtools index -@ 12 {output.bam}
         """
 
 ##################################################################
-##                   Align Stats & Generate Sam                 ##
+##                    Rule: Generate SAM and Flagstat           ##
 ##################################################################
 
 rule align_stats_gen_sam:
@@ -111,112 +114,10 @@ rule align_stats_gen_sam:
         stats="results/aligned/{sample}_flagstat.txt"
     envmodules:
         config["samtools"]
-    log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
+    log:
+        "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
     shell:
         """
-        samtools view -h -o {output.sam} {input.bam}
+        samtools view -h -o {output.sam} {input.bam} && \
         samtools flagstat {input.bam} > {output.stats}
         """
-
-##################################################################
-##                        MACS2 peak calling                    ##
-##################################################################
-
-rule call_peaks_with_macs2:
-    input:
-        unpack(sample_type_dict_from_sample)
-    output:
-        "results/macs2/{sample}_0.05_peaks.xls",
-        "results/macs2/{sample}_0.05_peaks.broadPeak",
-        "results/macs2/{sample}_0.05_peaks.gappedPeak"
-    params:
-        effective_genome_size=config["effective_genome_size"],
-        sample_name="{sample}",
-        minimum_FDR_cutoff=config["macs2_minimum_fdr"]
-    envmodules:
-        config["macs2"]
-    log: "results/logs/snakelogs/call_peaks_with_macs2.{sample}.log"
-    shell:
-        """
-        macs2 callpeak -t {input.treatment} -c {input.control} -f BAMPE -g {params.effective_genome_size} -n {params.sample_name}_{params.minimum_FDR_cutoff} -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2/
-        """
-
-##################################################################
-##                        BigWig creation                       ##
-##################################################################
-
-rule make_bigwig:
-    input:
-        bam="results/aligned/{sample}.bam"
-    output:
-        bigwig="results/bigwigs/{sample}.bw"
-    params:
-        bin_size=config["bin_size"],
-        mapping_quality=config["mapping_quality"],
-        genome_size=config["effective_genome_size"],
-        blacklistFile=config["blacklistFile"]
-    envmodules:
-        config["deeptools"]
-    log: "results/logs/snakelogs/make_bigwig.{sample}.log"
-    shell:
-        """
-        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
-        """
-
-##################################################################
-##                         Bin Processing                       ##
-##################################################################
-
-rule bin_processing:
-    input:
-        unpack(matched_files_from_sample)
-    output:
-        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{sample}_adjust.csv"
-    params:
-        bin_size=config["bin_size"],
-        mapping_quality=config["mapping_quality"],
-        work_dir="results/sigma"
-    log: "results/logs/snakelogs/bin_processing.{sample}.log"
-    shell:
-        """
-        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.bin_size} {params.mapping_quality} {params.work_dir}
-        """
-
-##################################################################
-##                         Sigma Analysis                       ##
-##################################################################
-
-rule sigma_analysis:
-    input:
-        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{sample}_adjust.csv"
-    output:
-        sigma_output="results/sigma/{sample}_sigma_output.csv",
-        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
-    params:
-        bin_size=config["bin_size"],
-        work_dir="results/sigma"
-    log: "results/logs/snakelogs/sigma_analysis.{sample}.log"
-    shell:
-        """
-        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.bin_size} {params.work_dir}
-        """
-
-##################################################################
-##                        Create BedGraphs                      ##
-##################################################################
-
-rule create_bedgraphs:
-    input:
-        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
-    output:
-        sigma_mb="results/sigma/{sample}_sigma_mb_sorted.bedGraph"
-    params:
-        bin_size=config["bin_size"],
-        work_dir="results/sigma"
-    log: "results/logs/snakelogs/create_bedgraphs.{sample}.log"
-    shell:
-        "bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}"

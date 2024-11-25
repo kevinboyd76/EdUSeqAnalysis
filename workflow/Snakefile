@@ -111,30 +111,42 @@ def matched_files_for_sigma(wildcards):
 ##                          Rule All                            ##
 ##################################################################
 
+##################################################################
+##                          Rule All                            ##
+##################################################################
+
+# Filter out invalid samples from indexes
+valid_samples = samples_table.index.dropna()
+valid_merged_samples = merged_samples_table.index.dropna()
+
+print("Valid individual samples:", valid_samples.tolist())
+print("Valid merged samples:", valid_merged_samples.tolist())
+
 rule all:
     input:
         # Handle merged and unmerged trimming
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=samples_table.index.union(merged_samples_table.index)),
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=valid_samples.union(valid_merged_samples)),
         
         # Include merged samples for aligned BAM files
-        expand("results/aligned/{sample}.bam", sample=samples_table.index.union(merged_samples_table.index)),
+        expand("results/aligned/{sample}.bam", sample=valid_samples.union(valid_merged_samples)),
         
         # Include merged samples for SAM and flagstat files
-        expand("results/aligned/{sample}.sam", sample=samples_table.index.union(merged_samples_table.index)),
-        expand("results/aligned/{sample}_flagstat.txt", sample=samples_table.index.union(merged_samples_table.index)),
+        expand("results/aligned/{sample}.sam", sample=valid_samples.union(valid_merged_samples)),
+        expand("results/aligned/{sample}_flagstat.txt", sample=valid_samples.union(valid_merged_samples)),
         
         # MACS2 peak calling only applies to treatment samples, including merged treatments
-        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=treatment_samples.index.union(merged_samples_table.index)),
+        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=treatment_samples.index.union(valid_merged_samples)),
         
         # BigWig creation for all samples
-        expand("results/bigwigs/{sample}.bw", sample=samples_table.index.union(merged_samples_table.index)),
+        expand("results/bigwigs/{sample}.bw", sample=valid_samples.union(valid_merged_samples)),
         
         # Sigma outputs for treatment samples
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index.union(merged_samples_table.index)),
-        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index.union(merged_samples_table.index)),
-        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index.union(merged_samples_table.index)),
-        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index.union(merged_samples_table.index)),
-        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples.index.union(merged_samples_table.index))
+        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index.union(valid_merged_samples)),
+        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index.union(valid_merged_samples)),
+        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index.union(valid_merged_samples)),
+        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index.union(valid_merged_samples)),
+        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples.index.union(valid_merged_samples))
+
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##

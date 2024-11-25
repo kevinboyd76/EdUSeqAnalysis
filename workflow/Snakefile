@@ -1,153 +1,42 @@
 configfile: "config/config.yml"
 
-##################################################################
-##                    Define input functions                    ##
-##################################################################
-
-# Author: Kevin Boyd
-# Date: Oct 11, 2024
-# Updated: Nov 25, 2024
-# Acknowledgments: This was created after reading and modifying an initial Snakefile from Chris Sansam.
-
 import pandas as pd
 
-# Read the CSV file and set an index using the values in the "sample" column.
-samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
+# Read unified table
+samples_table = pd.read_csv("config/samples.csv")
 
-# Create a subset of rows where merging is required
-merge_groups = samples_table[samples_table['Merged'] != 'NA']
+# Validate data
+assert samples_table["sample"].notna().all(), "Missing sample values."
+assert samples_table["Merged"].notna().all(), "Missing merged values."
 
-# Create a mapping of merged group to samples
-merge_dict = merge_groups.groupby('Merged').apply(lambda df: df['sample'].tolist()).to_dict()
+# Combine all valid sample and merged group names
+all_samples = list(samples_table["sample"]) + list(samples_table["Merged"].unique())
+all_samples = list(set(all_samples))  # Remove duplicates
 
-# Debugging step: Print the dictionary
-print("Merge Dictionary:", merge_dict)
+# Filter for treatment and control samples
+treatment_samples = samples_table[samples_table["sampleType"] == "treatment"]["sample"].tolist()
+control_samples = samples_table[samples_table["sampleType"] == "control"]["sample"].tolist()
 
-# Correctly construct merged_samples_table with two columns
-merged_samples_table = pd.DataFrame([
-    {"merged_sample": key, "samples": value} 
-    for key, value in merge_dict.items()
-])
-
-# Debugging step: Check the corrected merged_samples_table
-print("Corrected Merged Samples Table:")
-print(merged_samples_table)
-
-# Set index to 'merged_sample'
-merged_samples_table.set_index('merged_sample', inplace=True)
-
-# Filter out invalid samples from indexes
-valid_samples = samples_table.index.dropna().tolist()
-valid_merged_samples = merged_samples_table.index.dropna().tolist()
-
-# Combine valid samples and ensure no duplicates or invalid entries
-all_valid_samples = list(set(valid_samples + valid_merged_samples))
-
-# Debugging step: Print valid samples
-print("Valid individual samples:", valid_samples)
-print("Valid merged samples:", valid_merged_samples)
-print("All valid samples:", all_valid_samples)
-
-# Input function for FASTQ files (handles merged and unmerged samples)
+# Input function
 def fq_dict_from_sample(wildcards):
-    print("Processing sample:", wildcards.sample)
-    if pd.isna(wildcards.sample) or wildcards.sample not in all_valid_samples:
-        raise ValueError(f"Invalid or undefined sample encountered: {wildcards.sample}. Check the configuration.")
-    if wildcards.sample in valid_merged_samples:
-        # Return merged FASTQ files
+    if wildcards.sample in samples_table["sample"].values:
+        row = samples_table[samples_table["sample"] == wildcards.sample].iloc[0]
+        return {"fq1": row["fastq1"], "fq2": row["fastq2"]}
+    elif wildcards.sample in samples_table["Merged"].values:
+        rows = samples_table[samples_table["Merged"] == wildcards.sample]
         return {
-            "fq1": f"results/merged/{wildcards.sample}_R1.fastq.gz",
-            "fq2": f"results/merged/{wildcards.sample}_R2.fastq.gz"
-        }
-    elif wildcards.sample in valid_samples:
-        # Return individual FASTQ files
-        return {
-            "fq1": samples_table.loc[wildcards.sample, "fastq1"],
-            "fq2": samples_table.loc[wildcards.sample, "fastq2"]
+            "fq1": [row["fastq1"] for _, row in rows.iterrows()],
+            "fq2": [row["fastq2"] for _, row in rows.iterrows()]
         }
     else:
-        raise KeyError(f"Sample {wildcards.sample} not found in merged or individual samples.")
-
-# Make a new table with only 'treatment' sample rows
-treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
-
-# Input function for treatment and control BAM files (handles merged samples)
-def sample_type_dict_from_sample(wildcards):
-    if pd.isna(wildcards.sample):
-        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
-    if wildcards.sample in valid_merged_samples:
-        # Get the control from the first sample in the merged group
-        control_sample = samples_table.loc[merged_samples_table.loc[wildcards.sample, 'samples'][0], 'Control']
-        return {
-            "treatment": f"results/aligned/{wildcards.sample}.bam",
-            "control": f"results/aligned/{control_sample}.bam"
-        }
-    elif wildcards.sample in valid_samples:
-        # Use the control column for unmerged samples
-        return {
-            "treatment": f"results/aligned/{wildcards.sample}.bam",
-            "control": f"results/aligned/{samples_table.loc[wildcards.sample, 'Control']}.bam"
-        }
-    else:
-        raise KeyError(f"Sample {wildcards.sample} not found in merged or individual samples.")
-
-# Define the sample-control matching for sigma calculation
-def matched_files_from_sample(wildcards):
-    if pd.isna(wildcards.sample):
-        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
-    if wildcards.sample in valid_merged_samples:
-        control_sample = samples_table.loc[merged_samples_table.loc[wildcards.sample, 'samples'][0], 'Control']
-        return {
-            "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
-            "adjust_sam": f"results/aligned/{control_sample}.sam"
-        }
-    elif wildcards.sample in valid_samples:
-        return {
-            "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
-            "adjust_sam": f"results/aligned/{samples_table.loc[wildcards.sample, 'Control']}.sam"
-        }
-    else:
-        raise KeyError(f"Sample {wildcards.sample} not found in merged or individual samples.")
-
-# Define the sample-adjust file matching for sigma post-processing
-def matched_files_for_sigma(wildcards):
-    if pd.isna(wildcards.sample):
-        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
-    return {
-        "adjusted_sample_counts": f"results/sigma/{wildcards.sample}_adjusted_sample_counts.txt",
-        "sample_bin_counts": f"results/sigma/{wildcards.sample}_sample_bin_counts.txt",
-        "adjust_csv": f"results/sigma/{wildcards.sample}_adjust.csv"
-    }
-
-##################################################################
-##                          Rule All                            ##
-##################################################################
+        raise ValueError(f"Sample {wildcards.sample} not found.")
 
 rule all:
     input:
-        # Handle merged and unmerged trimming
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=all_valid_samples),
-        
-        # Include merged samples for aligned BAM files
-        expand("results/aligned/{sample}.bam", sample=all_valid_samples),
-        
-        # Include merged samples for SAM and flagstat files
-        expand("results/aligned/{sample}.sam", sample=all_valid_samples),
-        expand("results/aligned/{sample}_flagstat.txt", sample=all_valid_samples),
-        
-        # MACS2 peak calling only applies to treatment samples, including merged treatments
-        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=treatment_samples.index.union(valid_merged_samples)),
-        
-        # BigWig creation for all samples
-        expand("results/bigwigs/{sample}.bw", sample=all_valid_samples),
-        
-        # Sigma outputs for treatment samples
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index.union(valid_merged_samples)),
-        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index.union(valid_merged_samples)),
-        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index.union(valid_merged_samples)),
-        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index.union(valid_merged_samples)),
-        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples.index.union(valid_merged_samples))
-
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=all_samples),
+        expand("results/aligned/{sample}.bam", sample=all_samples),
+        expand("results/aligned/{sample}.sam", sample=all_samples),
+        expand("results/aligned/{sample}_flagstat.txt", sample=all_samples)
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##
@@ -155,18 +44,13 @@ rule all:
 
 rule trim_reads_with_fastp:
     input:
-        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+        unpack(fq_dict_from_sample)
     output:
         trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
         trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",
-        fastp_report="results/qc/fastp_reports/{sample}.html",
-        fastp_json="results/qc/fastp_reports/{sample}.json"
-    envmodules:
-        config["fastp"]
-    log: "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
     shell:
         """
-        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
+        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2}
         """
 
 ##################################################################

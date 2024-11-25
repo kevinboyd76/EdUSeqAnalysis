@@ -21,7 +21,7 @@ all_samples = list(set(all_samples))  # Remove duplicates
 treatment_samples = samples_table[samples_table["sampleType"] == "treatment"]["sample"].tolist()
 control_samples = samples_table[samples_table["sampleType"] == "control"]["sample"].tolist()
 
-# Define an input function to dynamically handle individual and merged samples
+# Input function for FASTQ files
 def fq_dict_from_sample(wildcards):
     if wildcards.sample in samples_table["sample"].values:
         # Handle individual samples
@@ -43,6 +43,9 @@ def fq_dict_from_sample(wildcards):
 
 rule all:
     input:
+        # Merged FASTQ files
+        expand("results/merged/{sample}_R1.fastq.gz", sample=samples_table["Merged"].unique()),
+        expand("results/merged/{sample}_R2.fastq.gz", sample=samples_table["Merged"].unique()),
         # Trimming results for all samples
         expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=all_samples),
         # Aligned BAM files for all samples
@@ -50,6 +53,29 @@ rule all:
         # SAM files and flagstat outputs
         expand("results/aligned/{sample}.sam", sample=all_samples),
         expand("results/aligned/{sample}_flagstat.txt", sample=all_samples)
+
+##################################################################
+##                    Rule: Merge FASTQ Files                   ##
+##################################################################
+
+rule merge_fastqs:
+    input:
+        fq1=lambda wildcards: [
+            row["fastq1"] for _, row in samples_table[samples_table["Merged"] == wildcards.sample].iterrows()
+        ],
+        fq2=lambda wildcards: [
+            row["fastq2"] for _, row in samples_table[samples_table["Merged"] == wildcards.sample].iterrows()
+        ]
+    output:
+        fq1="results/merged/{sample}_R1.fastq.gz",
+        fq2="results/merged/{sample}_R2.fastq.gz"
+    log:
+        "results/logs/snakelogs/merge_fastqs.{sample}.log"
+    shell:
+        """
+        cat {input.fq1} > {output.fq1}
+        cat {input.fq2} > {output.fq2}
+        """
 
 ##################################################################
 ##                    Rule: Trim Reads with fastp               ##

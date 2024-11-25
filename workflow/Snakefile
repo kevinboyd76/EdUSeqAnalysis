@@ -36,32 +36,33 @@ print(merged_samples_table)
 # Set index to 'merged_sample'
 merged_samples_table.set_index('merged_sample', inplace=True)
 
-# Create a combined table for all samples (merged and unmerged)
-all_samples = pd.concat(
-    [samples_table.loc[samples_table['Merged'] == 'NA'], merged_samples_table], 
-    keys=['sample', 'merged_sample']
-)
-
 # Input function for FASTQ files (handles merged and unmerged samples)
 def fq_dict_from_sample(wildcards):
+    print("Processing sample:", wildcards.sample)
+    if pd.isna(wildcards.sample):
+        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
     if wildcards.sample in merged_samples_table.index:
         # Return merged FASTQ files
         return {
             "fq1": f"results/merged/{wildcards.sample}_R1.fastq.gz",
             "fq2": f"results/merged/{wildcards.sample}_R2.fastq.gz"
         }
-    else:
+    elif wildcards.sample in samples_table.index:
         # Return individual FASTQ files
         return {
             "fq1": samples_table.loc[wildcards.sample, "fastq1"],
             "fq2": samples_table.loc[wildcards.sample, "fastq2"]
         }
+    else:
+        raise KeyError(f"Sample {wildcards.sample} not found in merged or individual samples.")
 
 # Make a new table with only 'treatment' sample rows
 treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
 
 # Input function for treatment and control BAM files (handles merged samples)
 def sample_type_dict_from_sample(wildcards):
+    if pd.isna(wildcards.sample):
+        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
     if wildcards.sample in merged_samples_table.index:
         # Get the control from the first sample in the merged group
         control_sample = samples_table.loc[merged_samples_table.loc[wildcards.sample, 'samples'][0], 'Control']
@@ -69,29 +70,37 @@ def sample_type_dict_from_sample(wildcards):
             "treatment": f"results/aligned/{wildcards.sample}.bam",
             "control": f"results/aligned/{control_sample}.bam"
         }
-    else:
+    elif wildcards.sample in samples_table.index:
         # Use the control column for unmerged samples
         return {
             "treatment": f"results/aligned/{wildcards.sample}.bam",
             "control": f"results/aligned/{samples_table.loc[wildcards.sample, 'Control']}.bam"
         }
+    else:
+        raise KeyError(f"Sample {wildcards.sample} not found in merged or individual samples.")
 
 # Define the sample-control matching for sigma calculation
 def matched_files_from_sample(wildcards):
+    if pd.isna(wildcards.sample):
+        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
     if wildcards.sample in merged_samples_table.index:
         control_sample = samples_table.loc[merged_samples_table.loc[wildcards.sample, 'samples'][0], 'Control']
         return {
             "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
             "adjust_sam": f"results/aligned/{control_sample}.sam"
         }
-    else:
+    elif wildcards.sample in samples_table.index:
         return {
             "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
             "adjust_sam": f"results/aligned/{samples_table.loc[wildcards.sample, 'Control']}.sam"
         }
+    else:
+        raise KeyError(f"Sample {wildcards.sample} not found in merged or individual samples.")
 
 # Define the sample-adjust file matching for sigma post-processing
 def matched_files_for_sigma(wildcards):
+    if pd.isna(wildcards.sample):
+        raise ValueError("Sample is NaN. Check the input files or merged samples configuration.")
     return {
         "adjusted_sample_counts": f"results/sigma/{wildcards.sample}_adjusted_sample_counts.txt",
         "sample_bin_counts": f"results/sigma/{wildcards.sample}_sample_bin_counts.txt",
@@ -105,7 +114,7 @@ def matched_files_for_sigma(wildcards):
 rule all:
     input:
         # Handle merged and unmerged trimming
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=samples_table.index),
+        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample=samples_table.index.union(merged_samples_table.index)),
         
         # Include merged samples for aligned BAM files
         expand("results/aligned/{sample}.bam", sample=samples_table.index.union(merged_samples_table.index)),

@@ -23,18 +23,17 @@ merge_dict = merge_groups.groupby('Merged').apply(lambda df: df['sample'].tolist
 # Debugging step: Print the dictionary
 print("Merge Dictionary:", merge_dict)
 
-# Ensure the dictionary is correctly converted to a DataFrame
-merged_samples_table = pd.DataFrame.from_dict(merge_dict, orient='index').reset_index()
+# Correctly construct merged_samples_table with two columns
+merged_samples_table = pd.DataFrame([
+    {"merged_sample": key, "samples": value} 
+    for key, value in merge_dict.items()
+])
 
-# Debugging step: Check the shape and content of the DataFrame
-print("Merged Samples Table Before Renaming Columns:")
+# Debugging step: Check the corrected merged_samples_table
+print("Corrected Merged Samples Table:")
 print(merged_samples_table)
 
-# Rename columns to ['merged_sample', 'samples'], ensuring the correct number of columns
-if merged_samples_table.shape[1] != 2:
-    raise ValueError(f"Unexpected shape of merged_samples_table: {merged_samples_table.shape}. Check merge_dict.")
-
-merged_samples_table.columns = ['merged_sample', 'samples']
+# Set index to 'merged_sample'
 merged_samples_table.set_index('merged_sample', inplace=True)
 
 # Create a combined table for all samples (merged and unmerged)

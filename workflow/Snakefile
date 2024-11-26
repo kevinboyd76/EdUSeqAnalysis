@@ -4,6 +4,10 @@ configfile: "config/config.yml"
 ##                    Define input functions                    ##
 ##################################################################
 
+# Author: Kevin Boyd
+# Date: Nov 26, 2024
+# Acknowledments: This was created after reading and modifying initial snakefile from Chris Sansam
+
 import pandas as pd
 
 # Read the samples.csv file

@@ -52,7 +52,13 @@ rule all:
         expand("results/aligned/{sample}.bam", sample=all_samples),
         # SAM files and flagstat outputs
         expand("results/aligned/{sample}.sam", sample=all_samples),
-        expand("results/aligned/{sample}_flagstat.txt", sample=all_samples)
+        expand("results/aligned/{sample}_flagstat.txt", sample=all_samples),
+        # MACS2 peaks
+        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=treatment_samples),
+        # Sigma calculations
+        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples),
+        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples),
+        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples)
 
 ##################################################################
 ##                    Rule: Merge FASTQ Files                   ##
@@ -146,4 +152,121 @@ rule align_stats_gen_sam:
         """
         samtools view -h -o {output.sam} {input.bam} && \
         samtools flagstat {input.bam} > {output.stats}
+        """
+
+##################################################################
+##                        Rule: Call Peaks                      ##
+##################################################################
+
+rule call_peaks_with_macs2:
+    input:
+        unpack(sample_type_dict_from_sample)
+    output:
+        "results/macs2/{sample}_0.05_peaks.xls",
+        "results/macs2/{sample}_0.05_peaks.broadPeak",
+        "results/macs2/{sample}_0.05_peaks.gappedPeak"
+    params:
+        effective_genome_size=config["effective_genome_size"],
+        sample_name="{sample}",
+        minimum_FDR_cutoff=config["macs2_minimum_fdr"]
+    envmodules:
+        config["macs2"]
+    log:
+        "results/logs/snakelogs/call_peaks_with_macs2.{sample}.log"
+    shell:
+        """
+        macs2 callpeak -t {input.treatment} -c {input.control} -f BAMPE \
+                       -g {params.effective_genome_size} -n {params.sample_name}_{params.minimum_FDR_cutoff} \
+                       -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2/
+        """
+
+##################################################################
+##                        Rule: Create BigWig                   ##
+##################################################################
+
+rule make_bigwig:
+    input:
+        bam="results/aligned/{sample}.bam"
+    output:
+        bigwig="results/bigwigs/{sample}.bw"
+    params:
+        bin_size=config["bin_size"],
+        mapping_quality=config["mapping_quality"],
+        genome_size=config["effective_genome_size"],
+        blacklistFile=config["blacklistFile"]
+    envmodules:
+        config["deeptools"]
+    log:
+        "results/logs/snakelogs/make_bigwig.{sample}.log"
+    shell:
+        """
+        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} \
+                    --minMappingQuality {params.mapping_quality} \
+                    --effectiveGenomeSize {params.genome_size} \
+                    --blackListFileName {params.blacklistFile} -p 8
+        """
+
+##################################################################
+##                         Rule: Bin Processing                 ##
+##################################################################
+
+rule bin_processing:
+    input:
+        unpack(matched_files_from_sample)
+    output:
+        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{sample}_adjust.csv"
+    params:
+        bin_size=config["bin_size"],
+        mapping_quality=config["mapping_quality"],
+        work_dir="results/sigma"
+    log:
+        "results/logs/snakelogs/bin_processing.{sample}.log"
+    shell:
+        """
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} \
+             {params.bin_size} {params.mapping_quality} {params.work_dir}
+        """
+
+##################################################################
+##                         Rule: Sigma Analysis                 ##
+##################################################################
+
+rule sigma_analysis:
+    input:
+        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{sample}_adjust.csv"
+    output:
+        sigma_output="results/sigma/{sample}_sigma_output.csv",
+        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
+    params:
+        bin_size=config["bin_size"],
+        work_dir="results/sigma"
+    log:
+        "results/logs/snakelogs/sigma_analysis.{sample}.log"
+    shell:
+        """
+        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} \
+               {input.sample_bin_counts} {input.adjust_csv} {params.bin_size} {params.work_dir}
+        """
+
+##################################################################
+##                        Rule: Create BedGraph                 ##
+##################################################################
+
+rule create_bedgraphs:
+    input:
+        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
+    output:
+        sigma_mb="results/sigma/{sample}_sigma_mb_sorted.bedGraph"
+    params:
+        bin_size=config["bin_size"],
+        work_dir="results/sigma"
+    log:
+        "results/logs/snakelogs/create_bedgraphs.{sample}.log"
+    shell:
+        """
+        bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}
         """

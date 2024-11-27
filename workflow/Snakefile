@@ -4,10 +4,6 @@ configfile: "config/config.yml"
 ##                    Define input functions                    ##
 ##################################################################
 
-# Author: Kevin Boyd
-# Date: Nov 26, 2024
-# Acknowledments: This was created after reading and modifying initial snakefile from Chris Sansam
-
 import pandas as pd
 
 # Read the samples.csv file
@@ -40,6 +36,52 @@ def fq_dict_from_sample(wildcards):
         }
     else:
         raise ValueError(f"Sample {wildcards.sample} not found in the samples table.")
+
+# Input function for treatment and control BAM files
+def sample_type_dict_from_sample(wildcards):
+    if wildcards.sample in samples_table["sample"].values:
+        # Individual sample
+        row = samples_table[samples_table["sample"] == wildcards.sample].iloc[0]
+        return {
+            "treatment": f"results/aligned/{wildcards.sample}.bam",
+            "control": f"results/aligned/{row['Control']}.bam" if pd.notna(row["Control"]) else None
+        }
+    elif wildcards.sample in samples_table["Merged"].values:
+        # Merged sample group
+        rows = samples_table[samples_table["Merged"] == wildcards.sample]
+        control_samples = rows["Control"].dropna().unique()
+        return {
+            "treatment": f"results/aligned/{wildcards.sample}.bam",
+            "control": f"results/aligned/{control_samples[0]}.bam" if len(control_samples) > 0 else None
+        }
+    else:
+        raise ValueError(f"Sample {wildcards.sample} not found in the samples table.")
+
+# Define the sample-control matching for sigma calculation
+def matched_files_from_sample(wildcards):
+    if wildcards.sample in samples_table["sample"].values:
+        row = samples_table[samples_table["sample"] == wildcards.sample].iloc[0]
+        return {
+            "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
+            "adjust_sam": f"results/aligned/{row['Control']}.sam" if pd.notna(row["Control"]) else None
+        }
+    elif wildcards.sample in samples_table["Merged"].values:
+        rows = samples_table[samples_table["Merged"] == wildcards.sample]
+        control_samples = rows["Control"].dropna().unique()
+        return {
+            "treatment_sam": f"results/aligned/{wildcards.sample}.sam",
+            "adjust_sam": f"results/aligned/{control_samples[0]}.sam" if len(control_samples) > 0 else None
+        }
+    else:
+        raise ValueError(f"Sample {wildcards.sample} not found in the samples table.")
+
+# Define the sample-adjust file matching for sigma post-processing
+def matched_files_for_sigma(wildcards):
+    return {
+        "adjusted_sample_counts": f"results/sigma/{wildcards.sample}_adjusted_sample_counts.txt",
+        "sample_bin_counts": f"results/sigma/{wildcards.sample}_sample_bin_counts.txt",
+        "adjust_csv": f"results/sigma/{wildcards.sample}_adjust.csv"
+    }
 
 ##################################################################
 ##                          Rule All                            ##

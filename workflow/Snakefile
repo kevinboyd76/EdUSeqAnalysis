@@ -4,69 +4,81 @@ configfile: "config/config.yml"
 ##                    Define input functions                    ##
 ##################################################################
 
-# Author: Kevin Boyd
-# Date: Oct 11, 2024
-# Acknowledments: This was created after reading and modifying initial snakefile from Chris Sansam
-
-
 import pandas as pd
 
-# read the CSV file and set an index using the values in the "sample" column.
+# Read samples CSV and set index
 samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
 
-# fastq filename input function definition set to Python dictionary
-def fq_dict_from_sample(wildcards):
-  return {
-    "fq1": samples_table.loc[wildcards.sample, "fastq1"],
-    "fq2": samples_table.loc[wildcards.sample, "fastq2"]
-  }
+# Extract unique sets
+sets = list(set(samples_table["set"]))
 
-# make a new sample table with only the 'treatment' sample rows
-samples_table2 = samples_table.loc[samples_table['sampleType'] == 'treatment']
+# Function to get all samples for a given set
+def filter_sample_by_set(Set, samples_table):
+    filtered = samples_table[samples_table["set"] == Set]
+    return filtered["sample"].tolist()
 
-# sample_type input function definition set to Python dictionary
-def sample_type_dict_from_sample(wildcards):
-  return {
-    "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
-    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.bam'
-  }
+# For convenience, define a dictionary of all FASTQs by sample:
+fastqs_by_sample = {
+    sample: {
+        "fq1": samples_table.loc[sample, "fastq1"],
+        "fq2": samples_table.loc[sample, "fastq2"]
+    }
+    for sample in samples_table.index
+}
 
-# Define the sample-control matching from samples.csv for sigma calculation
-def matched_files_from_sample(wildcards):
-  return {
-    "treatment_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.sam',
-    "adjust_sam": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.sam'
-  }
+# If you have treatment/control info (like in the original third snakefile), 
+# you can filter treatment samples similarly:
+treatment_samples = samples_table[samples_table["sampleType"] == "treatment"]
+control_samples = samples_table[samples_table["sampleType"] == "control"]
 
-# Define the sample-adjust file matching from samples.csv for sigma post processing
-def matched_files_for_sigma(wildcards):
-  return {
-    "adjusted_sample_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjusted_sample_counts.txt',
-    "sample_bin_counts": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_sample_bin_counts.txt',
-    "adjust_csv": 'results/sigma/' + samples_table2.loc[wildcards.sample, "sample"] + '_adjust.csv'
-  }
-
-# Create a filtered subset of samples (e.g., only treatment samples)
-treatment_samples = samples_table[samples_table['sampleType'] == 'treatment']
-adjust_samples = samples_table[samples_table['sampleType'] == 'control']
 
 ##################################################################
 ##                          Rule All                            ##
 ##################################################################
 
+# Instead of expanding on samples alone, we now expand on Sets and samples where appropriate.
+# For example, if you now want to produce results for each Set (after merging),
+# you will use {Set} expansions. If you still need per-sample outputs, you can also expand by {sample}.
+
 rule all:
     input:
-        expand("results/trimmed/{sample}_trimmed_R1.fastq.gz", sample = samples_table.index),
-        expand("results/aligned/{sample}.bam", sample = samples_table.index),
-        expand("results/aligned/{sample}.sam", sample = samples_table.index),
-        expand("results/aligned/{sample}_flagstat.txt", sample = samples_table.index),
-        expand("results/macs2/{sample}_0.05_peaks.broadPeak", sample=samples_table2.index),
-        expand("results/bigwigs/{sample}.bw", sample=samples_table.index),
-        expand("results/sigma/{sample}_adjusted_sample_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sample_bin_counts.txt", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_output.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_select_EU_0b.csv", sample=treatment_samples.index),
-        expand("results/sigma/{sample}_sigma_mb_sorted.bedGraph", sample=treatment_samples.index)
+        # Merged FASTQ for each set
+        expand("results/merged/{Set}_R1.fastq.gz", Set=sets),
+        expand("results/merged/{Set}_R2.fastq.gz", Set=sets),
+        # Trimmed FASTQ for each set (since now we treat each set as a "merged" entity)
+        expand("results/trimmed/{Set}_trimmed_R1.fastq.gz", Set=sets),
+        # Aligned BAM for each set
+        expand("results/aligned/{Set}.bam", Set=sets),
+        expand("results/aligned/{Set}.sam", Set=sets),
+        expand("results/aligned/{Set}_flagstat.txt", Set=sets),
+        # If you still want to call peaks on treatment sets only:
+        expand("results/macs2/{Set}_0.05_peaks.broadPeak", Set=list(set(treatment_samples["set"]))),
+        expand("results/bigwigs/{Set}.bw", Set=sets),
+        expand("results/sigma/{Set}_adjusted_sample_counts.txt", Set=list(set(treatment_samples["set"]))),
+        expand("results/sigma/{Set}_sample_bin_counts.txt", Set=list(set(treatment_samples["set"]))),
+        expand("results/sigma/{Set}_sigma_output.csv", Set=list(set(treatment_samples["set"]))),
+        expand("results/sigma/{Set}_sigma_select_EU_0b.csv", Set=list(set(treatment_samples["set"]))),
+        expand("results/sigma/{Set}_sigma_mb_sorted.bedGraph", Set=list(set(treatment_samples["set"])))
+
+
+##################################################################
+##                    Merge FASTQs per Set                      ##
+##################################################################
+
+rule merge_fastqs:
+    input:
+        fq1=lambda wildcards: [fastqs_by_sample[s]["fq1"] for s in filter_sample_by_set(wildcards.Set, samples_table)],
+        fq2=lambda wildcards: [fastqs_by_sample[s]["fq2"] for s in filter_sample_by_set(wildcards.Set, samples_table)]
+    output:
+        merged_fq1="results/merged/{Set}_R1.fastq.gz",
+        merged_fq2="results/merged/{Set}_R2.fastq.gz"
+    log:
+        "results/logs/snakelogs/merge_fastqs.{Set}.log"
+    shell:
+        """
+        zcat {input.fq1} | gzip > {output.merged_fq1}
+        zcat {input.fq2} | gzip > {output.merged_fq2}
+        """
 
 ##################################################################
 ##                    trim_reads_with_fastp                     ##
@@ -74,18 +86,21 @@ rule all:
 
 rule trim_reads_with_fastp:
     input:
-        unpack(fq_dict_from_sample)   # <--- we need to wrap our input function inside a special Snakemake function called unpack() which turns the dict into a collection of named inputs
+        fq1="results/merged/{Set}_R1.fastq.gz",
+        fq2="results/merged/{Set}_R2.fastq.gz"
     output:
-        trimmed1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
-        trimmed2="results/trimmed/{sample}_trimmed_R2.fastq.gz",
-        fastp_report="results/qc/fastp_reports/{sample}.html",
-        fastp_json="results/qc/fastp_reports/{sample}.json"
+        trimmed1="results/trimmed/{Set}_trimmed_R1.fastq.gz",
+        trimmed2="results/trimmed/{Set}_trimmed_R2.fastq.gz",
+        fastp_report="results/qc/fastp_reports/{Set}.html",
+        fastp_json="results/qc/fastp_reports/{Set}.json"
     envmodules:
         config["fastp"]
-    log: "results/logs/snakelogs/trim_reads_with_fastp.{sample}.log"
+    log:
+        "results/logs/snakelogs/trim_reads_with_fastp.{Set}.log"
     shell:
         """
-        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.sample}" -w 8
+        fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} \
+              -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.Set}" -w 8
         """
 
 ##################################################################
@@ -94,26 +109,27 @@ rule trim_reads_with_fastp:
 
 rule align_reads_with_bwamem:
     input:
-        R1="results/trimmed/{sample}_trimmed_R1.fastq.gz",
-        R2="results/trimmed/{sample}_trimmed_R2.fastq.gz"
+        R1="results/trimmed/{Set}_trimmed_R1.fastq.gz",
+        R2="results/trimmed/{Set}_trimmed_R2.fastq.gz"
     params:
         genome=config["bwa_genome"],
         blacklist=config["blacklistFile"]
     output:
-        bam="results/aligned/{sample}.bam",
-        bai="results/aligned/{sample}.bam.bai"
+        bam="results/aligned/{Set}.bam",
+        bai="results/aligned/{Set}.bam.bai"
     envmodules:
         config["bwamem2"],
         config["samtools"],
         config["bedtools"]
-    log: "results/logs/snakelogs/align_reads_with_bwamem.{sample}.log"
+    log:
+        "results/logs/snakelogs/align_reads_with_bwamem.{Set}.log"
     shell:
         """
-        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} |        # Align to genome
-        samtools view -b - |                                                 # Convert to BAM format immediately
-        bedtools intersect -v -abam - -b {params.blacklist} |                # Exclude blacklist regions
-        samtools sort -@ 12 -o {output.bam}                                  # Sort the output
-        samtools index -@ 12 {output.bam}                                    # Index the blacklisted BAM
+        bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | \
+        samtools view -b - | \
+        bedtools intersect -v -abam - -b {params.blacklist} | \
+        samtools sort -@ 12 -o {output.bam}
+        samtools index -@ 12 {output.bam}
         """
 
 ##################################################################
@@ -122,13 +138,14 @@ rule align_reads_with_bwamem:
 
 rule align_stats_gen_sam:
     input:
-        bam="results/aligned/{sample}.bam"
+        bam="results/aligned/{Set}.bam"
     output:
-        sam="results/aligned/{sample}.sam",
-        stats="results/aligned/{sample}_flagstat.txt"
+        sam="results/aligned/{Set}.sam",
+        stats="results/aligned/{Set}_flagstat.txt"
     envmodules:
         config["samtools"]
-    log: "results/logs/snakelogs/align_stats_gen_sam.{sample}.log"
+    log:
+        "results/logs/snakelogs/align_stats_gen_sam.{Set}.log"
     shell:
         """
         samtools view -h -o {output.sam} {input.bam}
@@ -139,23 +156,41 @@ rule align_stats_gen_sam:
 ##                        MACS2 peak calling                    ##
 ##################################################################
 
+# For peak calling, we need to pick out a treatment and control BAM for each set.
+# Since multiple samples form a set, you may decide how to pick a representative treatment/control
+# or adapt logic similar to the first snakefile's approach. Below is a simplified example.
+
+def get_treatment_control_bam(Set):
+    # Filter treatment samples in this Set
+    treat_rows = treatment_samples[treatment_samples["set"] == Set]
+    # Assuming one treatment sample per set for simplicity:
+    treatment_sample = treat_rows.iloc[0]["sample"]
+    control_sample = treat_rows.iloc[0]["Control"]
+    treatment_bam = f"results/aligned/{Set}.bam"
+    control_bam = f"results/aligned/{control_sample}.bam" if pd.notna(control_sample) else None
+    return treatment_bam, control_bam
+
 rule call_peaks_with_macs2:
     input:
-        unpack(sample_type_dict_from_sample)
+        lambda wildcards: get_treatment_control_bam(wildcards.Set)
     output:
-        "results/macs2/{sample}_0.05_peaks.xls",
-        "results/macs2/{sample}_0.05_peaks.broadPeak",
-        "results/macs2/{sample}_0.05_peaks.gappedPeak"
+        "results/macs2/{Set}_0.05_peaks.xls",
+        "results/macs2/{Set}_0.05_peaks.broadPeak",
+        "results/macs2/{Set}_0.05_peaks.gappedPeak"
     params:
         effective_genome_size=config["effective_genome_size"],
-        sample_name="{sample}",
+        sample_name="{Set}",
         minimum_FDR_cutoff=config["macs2_minimum_fdr"]
     envmodules:
         config["macs2"]
-    log: "results/logs/snakelogs/call_peaks_with_macs2.{sample}.log"
+    log:
+        "results/logs/snakelogs/call_peaks_with_macs2.{Set}.log"
     shell:
         """
-        macs2 callpeak -t {input.treatment} -c {input.control} -f BAMPE -g {params.effective_genome_size} -n {params.sample_name}_{params.minimum_FDR_cutoff} -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2/
+        macs2 callpeak -t {input[0]} {('-c ' + input[1]) if input[1] else ''} -f BAMPE \
+                       -g {params.effective_genome_size} \
+                       -n {params.sample_name}_{params.minimum_FDR_cutoff} \
+                       -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2/
         """
 
 ##################################################################
@@ -164,9 +199,9 @@ rule call_peaks_with_macs2:
 
 rule make_bigwig:
     input:
-        bam="results/aligned/{sample}.bam"
+        bam="results/aligned/{Set}.bam"
     output:
-        bigwig="results/bigwigs/{sample}.bw"
+        bigwig="results/bigwigs/{Set}.bw"
     params:
         bin_size=config["bin_size"],
         mapping_quality=config["mapping_quality"],
@@ -174,31 +209,51 @@ rule make_bigwig:
         blacklistFile=config["blacklistFile"]
     envmodules:
         config["deeptools"]
-    log: "results/logs/snakelogs/make_bigwig.{sample}.log"
+    log:
+        "results/logs/snakelogs/make_bigwig.{Set}.log"
     shell:
         """
-        bamCoverage -b {input.bam} -o {output.bigwig} --binSize {params.bin_size} --minMappingQuality {params.mapping_quality} --effectiveGenomeSize {params.genome_size} --blackListFileName {params.blacklistFile} -p 8
+        bamCoverage -b {input.bam} -o {output.bigwig} \
+                    --binSize {params.bin_size} \
+                    --minMappingQuality {params.mapping_quality} \
+                    --effectiveGenomeSize {params.genome_size} \
+                    --blackListFileName {params.blacklistFile} -p 8
         """
 
 ##################################################################
 ##                         Bin Processing                       ##
 ##################################################################
 
+# Similar logic applies for sigma calculations at the set-level. If needed,
+# adapt matched files logic. For simplicity, we'll assume a single treatment/control pair per set.
+
+def sigma_matched_files(Set):
+    # Using the previously chosen treatment and control sample names:
+    treat_rows = treatment_samples[treatment_samples["set"] == Set]
+    treatment_sample = treat_rows.iloc[0]["sample"]
+    control_sample = treat_rows.iloc[0]["Control"]
+    treatment_sam = f"results/aligned/{Set}.sam"
+    control_sam = f"results/aligned/{control_sample}.sam"
+    return treatment_sam, control_sam
+
 rule bin_processing:
     input:
-        unpack(matched_files_from_sample)
+        lambda wildcards: {"treatment_sam": sigma_matched_files(wildcards.Set)[0],
+                           "adjust_sam": sigma_matched_files(wildcards.Set)[1]}
     output:
-        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{sample}_adjust.csv"
+        adjusted_sample_counts="results/sigma/{Set}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{Set}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{Set}_adjust.csv"
     params:
         bin_size=config["bin_size"],
         mapping_quality=config["mapping_quality"],
         work_dir="results/sigma"
-    log: "results/logs/snakelogs/bin_processing.{sample}.log"
+    log:
+        "results/logs/snakelogs/bin_processing.{Set}.log"
     shell:
         """
-        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} {params.bin_size} {params.mapping_quality} {params.work_dir}
+        bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} \
+             {params.bin_size} {params.mapping_quality} {params.work_dir}
         """
 
 ##################################################################
@@ -207,19 +262,21 @@ rule bin_processing:
 
 rule sigma_analysis:
     input:
-        adjusted_sample_counts="results/sigma/{sample}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{sample}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{sample}_adjust.csv"
+        adjusted_sample_counts="results/sigma/{Set}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{Set}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{Set}_adjust.csv"
     output:
-        sigma_output="results/sigma/{sample}_sigma_output.csv",
-        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
+        sigma_output="results/sigma/{Set}_sigma_output.csv",
+        select_sigma="results/sigma/{Set}_sigma_select_EU_0b.csv"
     params:
         bin_size=config["bin_size"],
         work_dir="results/sigma"
-    log: "results/logs/snakelogs/sigma_analysis.{sample}.log"
+    log:
+        "results/logs/snakelogs/sigma_analysis.{Set}.log"
     shell:
         """
-        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} {input.sample_bin_counts} {input.adjust_csv} {params.bin_size} {params.work_dir}
+        python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} \
+               {input.sample_bin_counts} {input.adjust_csv} {params.bin_size} {params.work_dir}
         """
 
 ##################################################################
@@ -228,12 +285,14 @@ rule sigma_analysis:
 
 rule create_bedgraphs:
     input:
-        select_sigma="results/sigma/{sample}_sigma_select_EU_0b.csv"
+        select_sigma="results/sigma/{Set}_sigma_select_EU_0b.csv"
     output:
-        sigma_mb="results/sigma/{sample}_sigma_mb_sorted.bedGraph"
+        sigma_mb="results/sigma/{Set}_sigma_mb_sorted.bedGraph"
     params:
         bin_size=config["bin_size"],
         work_dir="results/sigma"
-    log: "results/logs/snakelogs/create_bedgraphs.{sample}.log"
+    log:
+        "results/logs/snakelogs/create_bedgraphs.{Set}.log"
     shell:
         "bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}"
+

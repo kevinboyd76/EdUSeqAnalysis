@@ -9,15 +9,15 @@ import pandas as pd
 # Read samples CSV and set index
 samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
 
-# Extract unique sets
-sets = list(set(samples_table["Merged"]))
+# Extract unique merged groups
+merged_groups = list(set(samples_table["Merged"]))
 
-# Function to get all samples for a given set
-def filter_sample_by_set(Set, samples_table):
-    filtered = samples_table[samples_table["Merged"] == Set]
+# Function to get all samples for a given merged group
+def filter_sample_by_merged(Merged, samples_table):
+    filtered = samples_table[samples_table["Merged"] == Merged]
     return filtered["sample"].tolist()
 
-# For convenience, define a dictionary of all FASTQs by sample:
+# Dictionary of all FASTQs by sample
 fastqs_by_sample = {
     sample: {
         "fq1": samples_table.loc[sample, "fastq1"],
@@ -26,54 +26,50 @@ fastqs_by_sample = {
     for sample in samples_table.index
 }
 
-# If you have treatment/control info (like in the original third snakefile), 
-# you can filter treatment samples similarly:
+# Filter treatment and control samples
 treatment_samples = samples_table[samples_table["sampleType"] == "treatment"]
 control_samples = samples_table[samples_table["sampleType"] == "control"]
-
 
 ##################################################################
 ##                          Rule All                            ##
 ##################################################################
 
-# Instead of expanding on samples alone, we now expand on Sets and samples where appropriate.
-# For example, if you now want to produce results for each Set (after merging),
-# you will use {Set} expansions. If you still need per-sample outputs, you can also expand by {sample}.
-
 rule all:
     input:
-        # Merged FASTQ for each set
-        expand("results/merged/{Set}_R1.fastq.gz", Set=sets),
-        expand("results/merged/{Set}_R2.fastq.gz", Set=sets),
-        # Trimmed FASTQ for each set (since now we treat each set as a "merged" entity)
-        expand("results/trimmed/{Set}_trimmed_R1.fastq.gz", Set=sets),
-        # Aligned BAM for each set
-        expand("results/aligned/{Set}.bam", Set=sets),
-        expand("results/aligned/{Set}.sam", Set=sets),
-        expand("results/aligned/{Set}_flagstat.txt", Set=sets),
-        # If you still want to call peaks on treatment sets only:
-        expand("results/macs2/{Set}_0.05_peaks.broadPeak", Set=list(set(treatment_samples["Merged"]))),
-        expand("results/bigwigs/{Set}.bw", Set=sets),
-        expand("results/sigma/{Set}_adjusted_sample_counts.txt", Set=list(set(treatment_samples["Merged"]))),
-        expand("results/sigma/{Set}_sample_bin_counts.txt", Set=list(set(treatment_samples["Merged"]))),
-        expand("results/sigma/{Set}_sigma_output.csv", Set=list(set(treatment_samples["Merged"]))),
-        expand("results/sigma/{Set}_sigma_select_EU_0b.csv", Set=list(set(treatment_samples["Merged"]))),
-        expand("results/sigma/{Set}_sigma_mb_sorted.bedGraph", Set=list(set(treatment_samples["Merged"])))
+        # Merged FASTQ for each merged group
+        expand("results/merged/{Merged}_R1.fastq.gz", Merged=merged_groups),
+        expand("results/merged/{Merged}_R2.fastq.gz", Merged=merged_groups),
+        # Trimmed FASTQ for each merged group
+        expand("results/trimmed/{Merged}_trimmed_R1.fastq.gz", Merged=merged_groups),
+        # Aligned BAM for each merged group
+        expand("results/aligned/{Merged}.bam", Merged=merged_groups),
+        expand("results/aligned/{Merged}.sam", Merged=merged_groups),
+        expand("results/aligned/{Merged}_flagstat.txt", Merged=merged_groups),
+        # MACS2 peaks for merged treatment groups
+        expand("results/macs2/{Merged}_0.05_peaks.broadPeak", Merged=list(set(treatment_samples["Merged"]))),
+        # BigWigs for each merged group
+        expand("results/bigwigs/{Merged}.bw", Merged=merged_groups),
+        # Sigma-related outputs for treatment merged groups
+        expand("results/sigma/{Merged}_adjusted_sample_counts.txt", Merged=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Merged}_sample_bin_counts.txt", Merged=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Merged}_sigma_output.csv", Merged=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Merged}_sigma_select_EU_0b.csv", Merged=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Merged}_sigma_mb_sorted.bedGraph", Merged=list(set(treatment_samples["Merged"])))
 
 
 ##################################################################
-##                    Merge FASTQs per Set                      ##
+##                    Merge FASTQs per Merged Group             ##
 ##################################################################
 
 rule merge_fastqs:
     input:
-        fq1=lambda wildcards: [fastqs_by_sample[s]["fq1"] for s in filter_sample_by_set(wildcards.Set, samples_table)],
-        fq2=lambda wildcards: [fastqs_by_sample[s]["fq2"] for s in filter_sample_by_set(wildcards.Set, samples_table)]
+        fq1=lambda wildcards: [fastqs_by_sample[s]["fq1"] for s in filter_sample_by_merged(wildcards.Merged, samples_table)],
+        fq2=lambda wildcards: [fastqs_by_sample[s]["fq2"] for s in filter_sample_by_merged(wildcards.Merged, samples_table)]
     output:
-        merged_fq1="results/merged/{Set}_R1.fastq.gz",
-        merged_fq2="results/merged/{Set}_R2.fastq.gz"
+        merged_fq1="results/merged/{Merged}_R1.fastq.gz",
+        merged_fq2="results/merged/{Merged}_R2.fastq.gz"
     log:
-        "results/logs/snakelogs/merge_fastqs.{Set}.log"
+        "results/logs/snakelogs/merge_fastqs.{Merged}.log"
     shell:
         """
         zcat {input.fq1} | gzip > {output.merged_fq1}
@@ -86,21 +82,21 @@ rule merge_fastqs:
 
 rule trim_reads_with_fastp:
     input:
-        fq1="results/merged/{Set}_R1.fastq.gz",
-        fq2="results/merged/{Set}_R2.fastq.gz"
+        fq1="results/merged/{Merged}_R1.fastq.gz",
+        fq2="results/merged/{Merged}_R2.fastq.gz"
     output:
-        trimmed1="results/trimmed/{Set}_trimmed_R1.fastq.gz",
-        trimmed2="results/trimmed/{Set}_trimmed_R2.fastq.gz",
-        fastp_report="results/qc/fastp_reports/{Set}.html",
-        fastp_json="results/qc/fastp_reports/{Set}.json"
+        trimmed1="results/trimmed/{Merged}_trimmed_R1.fastq.gz",
+        trimmed2="results/trimmed/{Merged}_trimmed_R2.fastq.gz",
+        fastp_report="results/qc/fastp_reports/{Merged}.html",
+        fastp_json="results/qc/fastp_reports/{Merged}.json"
     envmodules:
         config["fastp"]
     log:
-        "results/logs/snakelogs/trim_reads_with_fastp.{Set}.log"
+        "results/logs/snakelogs/trim_reads_with_fastp.{Merged}.log"
     shell:
         """
         fastp -i {input.fq1} -I {input.fq2} -o {output.trimmed1} -O {output.trimmed2} \
-              -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.Set}" -w 8
+              -h {output.fastp_report} --json {output.fastp_json} -R "{wildcards.Merged}" -w 8
         """
 
 ##################################################################
@@ -109,20 +105,20 @@ rule trim_reads_with_fastp:
 
 rule align_reads_with_bwamem:
     input:
-        R1="results/trimmed/{Set}_trimmed_R1.fastq.gz",
-        R2="results/trimmed/{Set}_trimmed_R2.fastq.gz"
+        R1="results/trimmed/{Merged}_trimmed_R1.fastq.gz",
+        R2="results/trimmed/{Merged}_trimmed_R2.fastq.gz"
     params:
         genome=config["bwa_genome"],
         blacklist=config["blacklistFile"]
     output:
-        bam="results/aligned/{Set}.bam",
-        bai="results/aligned/{Set}.bam.bai"
+        bam="results/aligned/{Merged}.bam",
+        bai="results/aligned/{Merged}.bam.bai"
     envmodules:
         config["bwamem2"],
         config["samtools"],
         config["bedtools"]
     log:
-        "results/logs/snakelogs/align_reads_with_bwamem.{Set}.log"
+        "results/logs/snakelogs/align_reads_with_bwamem.{Merged}.log"
     shell:
         """
         bwa-mem2 mem -M -t 12 {params.genome} {input.R1} {input.R2} | \
@@ -138,14 +134,14 @@ rule align_reads_with_bwamem:
 
 rule align_stats_gen_sam:
     input:
-        bam="results/aligned/{Set}.bam"
+        bam="results/aligned/{Merged}.bam"
     output:
-        sam="results/aligned/{Set}.sam",
-        stats="results/aligned/{Set}_flagstat.txt"
+        sam="results/aligned/{Merged}.sam",
+        stats="results/aligned/{Merged}_flagstat.txt"
     envmodules:
         config["samtools"]
     log:
-        "results/logs/snakelogs/align_stats_gen_sam.{Set}.log"
+        "results/logs/snakelogs/align_stats_gen_sam.{Merged}.log"
     shell:
         """
         samtools view -h -o {output.sam} {input.bam}
@@ -156,35 +152,31 @@ rule align_stats_gen_sam:
 ##                        MACS2 peak calling                    ##
 ##################################################################
 
-# For peak calling, we need to pick out a treatment and control BAM for each set.
-# Since multiple samples form a set, you may decide how to pick a representative treatment/control
-# or adapt logic similar to the first snakefile's approach. Below is a simplified example.
-
-def get_treatment_control_bam(Set):
-    # Filter treatment samples in this Set
-    treat_rows = treatment_samples[treatment_samples["Merged"] == Set]
-    # Assuming one treatment sample per set for simplicity:
+def get_treatment_control_bam(Merged):
+    # Filter treatment samples in this merged group
+    treat_rows = treatment_samples[treatment_samples["Merged"] == Merged]
+    # Assuming one treatment sample per merged group for simplicity:
     treatment_sample = treat_rows.iloc[0]["sample"]
     control_sample = treat_rows.iloc[0]["Control"]
-    treatment_bam = f"results/aligned/{Set}.bam"
+    treatment_bam = f"results/aligned/{Merged}.bam"
     control_bam = f"results/aligned/{control_sample}.bam" if pd.notna(control_sample) else None
     return treatment_bam, control_bam
 
 rule call_peaks_with_macs2:
     input:
-        lambda wildcards: get_treatment_control_bam(wildcards.Set)
+        lambda wildcards: get_treatment_control_bam(wildcards.Merged)
     output:
-        "results/macs2/{Set}_0.05_peaks.xls",
-        "results/macs2/{Set}_0.05_peaks.broadPeak",
-        "results/macs2/{Set}_0.05_peaks.gappedPeak"
+        "results/macs2/{Merged}_0.05_peaks.xls",
+        "results/macs2/{Merged}_0.05_peaks.broadPeak",
+        "results/macs2/{Merged}_0.05_peaks.gappedPeak"
     params:
         effective_genome_size=config["effective_genome_size"],
-        sample_name="{Set}",
+        sample_name="{Merged}",
         minimum_FDR_cutoff=config["macs2_minimum_fdr"]
     envmodules:
         config["macs2"]
     log:
-        "results/logs/snakelogs/call_peaks_with_macs2.{Set}.log"
+        "results/logs/snakelogs/call_peaks_with_macs2.{Merged}.log"
     shell:
         """
         macs2 callpeak -t {input[0]} {('-c ' + input[1]) if input[1] else ''} -f BAMPE \
@@ -199,9 +191,9 @@ rule call_peaks_with_macs2:
 
 rule make_bigwig:
     input:
-        bam="results/aligned/{Set}.bam"
+        bam="results/aligned/{Merged}.bam"
     output:
-        bigwig="results/bigwigs/{Set}.bw"
+        bigwig="results/bigwigs/{Merged}.bw"
     params:
         bin_size=config["bin_size"],
         mapping_quality=config["mapping_quality"],
@@ -210,7 +202,7 @@ rule make_bigwig:
     envmodules:
         config["deeptools"]
     log:
-        "results/logs/snakelogs/make_bigwig.{Set}.log"
+        "results/logs/snakelogs/make_bigwig.{Merged}.log"
     shell:
         """
         bamCoverage -b {input.bam} -o {output.bigwig} \
@@ -224,32 +216,30 @@ rule make_bigwig:
 ##                         Bin Processing                       ##
 ##################################################################
 
-# Similar logic applies for sigma calculations at the set-level. If needed,
-# adapt matched files logic. For simplicity, we'll assume a single treatment/control pair per set.
-
-def sigma_matched_files(Set):
-    # Using the previously chosen treatment and control sample names:
-    treat_rows = treatment_samples[treatment_samples["Merged"] == Set]
+def sigma_matched_files(Merged):
+    treat_rows = treatment_samples[treatment_samples["Merged"] == Merged]
     treatment_sample = treat_rows.iloc[0]["sample"]
     control_sample = treat_rows.iloc[0]["Control"]
-    treatment_sam = f"results/aligned/{Set}.sam"
+    treatment_sam = f"results/aligned/{Merged}.sam"
     control_sam = f"results/aligned/{control_sample}.sam"
     return treatment_sam, control_sam
 
 rule bin_processing:
     input:
-        lambda wildcards: {"treatment_sam": sigma_matched_files(wildcards.Set)[0],
-                           "adjust_sam": sigma_matched_files(wildcards.Set)[1]}
+        lambda wildcards: {
+            "treatment_sam": sigma_matched_files(wildcards.Merged)[0],
+            "adjust_sam": sigma_matched_files(wildcards.Merged)[1]
+        }
     output:
-        adjusted_sample_counts="results/sigma/{Set}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{Set}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{Set}_adjust.csv"
+        adjusted_sample_counts="results/sigma/{Merged}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{Merged}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{Merged}_adjust.csv"
     params:
         bin_size=config["bin_size"],
         mapping_quality=config["mapping_quality"],
         work_dir="results/sigma"
     log:
-        "results/logs/snakelogs/bin_processing.{Set}.log"
+        "results/logs/snakelogs/bin_processing.{Merged}.log"
     shell:
         """
         bash sigma_calculation/eduseq_bin_processing.sh {input.adjust_sam} {input.treatment_sam} \
@@ -262,17 +252,17 @@ rule bin_processing:
 
 rule sigma_analysis:
     input:
-        adjusted_sample_counts="results/sigma/{Set}_adjusted_sample_counts.txt",
-        sample_bin_counts="results/sigma/{Set}_sample_bin_counts.txt",
-        adjust_csv="results/sigma/{Set}_adjust.csv"
+        adjusted_sample_counts="results/sigma/{Merged}_adjusted_sample_counts.txt",
+        sample_bin_counts="results/sigma/{Merged}_sample_bin_counts.txt",
+        adjust_csv="results/sigma/{Merged}_adjust.csv"
     output:
-        sigma_output="results/sigma/{Set}_sigma_output.csv",
-        select_sigma="results/sigma/{Set}_sigma_select_EU_0b.csv"
+        sigma_output="results/sigma/{Merged}_sigma_output.csv",
+        select_sigma="results/sigma/{Merged}_sigma_select_EU_0b.csv"
     params:
         bin_size=config["bin_size"],
         work_dir="results/sigma"
     log:
-        "results/logs/snakelogs/sigma_analysis.{Set}.log"
+        "results/logs/snakelogs/sigma_analysis.{Merged}.log"
     shell:
         """
         python sigma_calculation/eduseq_sigma_analysis.py {input.adjusted_sample_counts} \
@@ -285,14 +275,14 @@ rule sigma_analysis:
 
 rule create_bedgraphs:
     input:
-        select_sigma="results/sigma/{Set}_sigma_select_EU_0b.csv"
+        select_sigma="results/sigma/{Merged}_sigma_select_EU_0b.csv"
     output:
-        sigma_mb="results/sigma/{Set}_sigma_mb_sorted.bedGraph"
+        sigma_mb="results/sigma/{Merged}_sigma_mb_sorted.bedGraph"
     params:
         bin_size=config["bin_size"],
         work_dir="results/sigma"
     log:
-        "results/logs/snakelogs/create_bedgraphs.{Set}.log"
+        "results/logs/snakelogs/create_bedgraphs.{Merged}.log"
     shell:
         "bash sigma_calculation/eduseq_sigma_bedGraphs.sh {input.select_sigma} {params.bin_size} {params.work_dir}"
 

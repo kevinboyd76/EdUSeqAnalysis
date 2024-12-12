@@ -162,7 +162,7 @@ rule align_stats_gen_sam:
 
 def get_treatment_control_bam(Set):
     # Filter treatment samples in this Set
-    treat_rows = treatment_samples[treatment_samples["set"] == Set]
+    treat_rows = treatment_samples[treatment_samples["Merged"] == Set]
     # Assuming one treatment sample per set for simplicity:
     treatment_sample = treat_rows.iloc[0]["sample"]
     control_sample = treat_rows.iloc[0]["Control"]
@@ -229,7 +229,7 @@ rule make_bigwig:
 
 def sigma_matched_files(Set):
     # Using the previously chosen treatment and control sample names:
-    treat_rows = treatment_samples[treatment_samples["set"] == Set]
+    treat_rows = treatment_samples[treatment_samples["Merged"] == Set]
     treatment_sample = treat_rows.iloc[0]["sample"]
     control_sample = treat_rows.iloc[0]["Control"]
     treatment_sam = f"results/aligned/{Set}.sam"

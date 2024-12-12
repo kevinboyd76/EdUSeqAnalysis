@@ -226,10 +226,10 @@ def sigma_matched_files(Merged):
 
 rule bin_processing:
     input:
-        lambda wildcards: {
+        unpack(lambda wildcards: {
             "treatment_sam": sigma_matched_files(wildcards.Merged)[0],
             "adjust_sam": sigma_matched_files(wildcards.Merged)[1]
-        }
+        })
     output:
         adjusted_sample_counts="results/sigma/{Merged}_adjusted_sample_counts.txt",
         sample_bin_counts="results/sigma/{Merged}_sample_bin_counts.txt",

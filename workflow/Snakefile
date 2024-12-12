@@ -10,11 +10,11 @@ import pandas as pd
 samples_table = pd.read_csv("config/samples.csv").set_index("sample", drop=False)
 
 # Extract unique sets
-sets = list(set(samples_table["set"]))
+sets = list(set(samples_table["Merged"]))
 
 # Function to get all samples for a given set
 def filter_sample_by_set(Set, samples_table):
-    filtered = samples_table[samples_table["set"] == Set]
+    filtered = samples_table[samples_table["Merged"] == Set]
     return filtered["sample"].tolist()
 
 # For convenience, define a dictionary of all FASTQs by sample:

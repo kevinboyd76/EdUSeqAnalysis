@@ -152,34 +152,24 @@ rule align_stats_gen_sam:
 ##                        MACS2 peak calling                    ##
 ##################################################################
 
-def get_treatment_control_bam(Merged):
-    # Filter treatment samples in this merged group
-    treat_rows = treatment_samples[treatment_samples["Merged"] == Merged]
-    # Assuming one treatment sample per merged group for simplicity:
-    treatment_sample = treat_rows.iloc[0]["sample"]
-    control_sample = treat_rows.iloc[0]["Control"]
-    treatment_bam = f"results/aligned/{Merged}.bam"
-    control_bam = f"results/aligned/{control_sample}.bam" if pd.notna(control_sample) else None
-    return treatment_bam, control_bam
-
 rule call_peaks_with_macs2:
     input:
-        lambda wildcards: get_treatment_control_bam(wildcards.Merged)
+        unpack(sample_type_dict_from_sample)  # Provides input.treatment and input.control
     output:
-        "results/macs2/{Merged}_0.05_peaks.xls",
-        "results/macs2/{Merged}_0.05_peaks.broadPeak",
-        "results/macs2/{Merged}_0.05_peaks.gappedPeak"
+        "results/macs2/{sample}_0.05_peaks.xls",
+        "results/macs2/{sample}_0.05_peaks.broadPeak",
+        "results/macs2/{sample}_0.05_peaks.gappedPeak"
     params:
         effective_genome_size=config["effective_genome_size"],
-        sample_name="{Merged}",
-        minimum_FDR_cutoff=config["macs2_minimum_fdr"]
+        sample_name="{sample}",
+        minimum_FDR_cutoff=config["macs2_minimum_fdr"],
+        control_arg=lambda wildcards, input: f"-c {input.control}" if input.control else ""
     envmodules:
         config["macs2"]
-    log:
-        "results/logs/snakelogs/call_peaks_with_macs2.{Merged}.log"
+    log: "results/logs/snakelogs/call_peaks_with_macs2.{sample}.log"
     shell:
         """
-        macs2 callpeak -t {input[0]} {('-c ' + input[1]) if input[1] else ''} -f BAMPE \
+        macs2 callpeak -t {input.treatment} {params.control_arg} -f BAMPE \
                        -g {params.effective_genome_size} \
                        -n {params.sample_name}_{params.minimum_FDR_cutoff} \
                        -q {params.minimum_FDR_cutoff} --broad --outdir results/macs2/

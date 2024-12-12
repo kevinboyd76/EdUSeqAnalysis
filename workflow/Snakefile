@@ -52,13 +52,13 @@ rule all:
         expand("results/aligned/{Set}.sam", Set=sets),
         expand("results/aligned/{Set}_flagstat.txt", Set=sets),
         # If you still want to call peaks on treatment sets only:
-        expand("results/macs2/{Set}_0.05_peaks.broadPeak", Set=list(set(treatment_samples["set"]))),
+        expand("results/macs2/{Set}_0.05_peaks.broadPeak", Set=list(set(treatment_samples["Merged"]))),
         expand("results/bigwigs/{Set}.bw", Set=sets),
-        expand("results/sigma/{Set}_adjusted_sample_counts.txt", Set=list(set(treatment_samples["set"]))),
-        expand("results/sigma/{Set}_sample_bin_counts.txt", Set=list(set(treatment_samples["set"]))),
-        expand("results/sigma/{Set}_sigma_output.csv", Set=list(set(treatment_samples["set"]))),
-        expand("results/sigma/{Set}_sigma_select_EU_0b.csv", Set=list(set(treatment_samples["set"]))),
-        expand("results/sigma/{Set}_sigma_mb_sorted.bedGraph", Set=list(set(treatment_samples["set"])))
+        expand("results/sigma/{Set}_adjusted_sample_counts.txt", Set=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Set}_sample_bin_counts.txt", Set=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Set}_sigma_output.csv", Set=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Set}_sigma_select_EU_0b.csv", Set=list(set(treatment_samples["Merged"]))),
+        expand("results/sigma/{Set}_sigma_mb_sorted.bedGraph", Set=list(set(treatment_samples["Merged"])))
 
 
 ##################################################################

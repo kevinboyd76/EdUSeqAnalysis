@@ -26,6 +26,13 @@ fastqs_by_sample = {
     for sample in samples_table.index
 }
 
+# sample_type input function definition set to Python dictionary
+def sample_type_dict_from_sample(wildcards):
+  return {
+    "treatment": 'results/aligned/' + samples_table2.loc[wildcards.sample, "sample"] + '.bam',
+    "control": 'results/aligned/' + samples_table2.loc[wildcards.sample, "Control"] + '.bam'
+  }
+
 # Filter treatment and control samples
 treatment_samples = samples_table[samples_table["sampleType"] == "treatment"]
 control_samples = samples_table[samples_table["sampleType"] == "control"]
